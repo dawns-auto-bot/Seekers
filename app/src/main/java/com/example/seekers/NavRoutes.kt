@@ -6,4 +6,5 @@ sealed class NavRoutes(val route: String) {
     object LobbyCreation: NavRoutes("LobbyCreation")
     object JoinLobby: NavRoutes("JoinLobby")
     object Lobby: NavRoutes("Lobby")
+    object Scanner: NavRoutes("Scanner")
 }

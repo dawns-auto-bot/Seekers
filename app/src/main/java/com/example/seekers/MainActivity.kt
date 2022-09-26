@@ -43,7 +43,7 @@ fun MyAppNavHost() {
             StartAndJoinBtns(navController)
         }
         composable(NavRoutes.JoinLobby.route) {
-            TestJoinLobby()
+            JoinLobby(navController = navController)
         }
         composable(NavRoutes.LobbyCreation.route) {
             LobbyCreationScreen(navController = navController)

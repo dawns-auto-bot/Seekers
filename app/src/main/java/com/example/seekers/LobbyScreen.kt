@@ -99,6 +99,7 @@ fun PlayerCard(player: Player) {
         else -> R.drawable.whale
 
 
+
     }
 
     Card(
