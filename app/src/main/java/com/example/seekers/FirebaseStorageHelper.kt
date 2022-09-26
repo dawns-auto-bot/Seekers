@@ -17,7 +17,7 @@ object FirebaseStorageHelper {
         val baos = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)
         val data = baos.toByteArray()
-        val uploadTask = storageRef.putBytes(data)
+        val uploadTask = ref.putBytes(data)
         uploadTask.addOnFailureListener {
             Log.e(TAG, "uploadImg: ", it)
         }.addOnSuccessListener { taskSnapshot ->

@@ -46,6 +46,7 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel()) {
             text = stringResource(id = R.string.lobby_creation),
             style = MaterialTheme.typography.h6
         )
+
         CreationForm(vm = vm)
         CustomButton(
             modifier = Modifier.fillMaxWidth(),
@@ -176,7 +177,7 @@ fun generateQRCode(gameId: String): Bitmap {
     val fileOut = ByteArrayOutputStream()
 
     QRCode(gameId)
-        .render(cellSize = 50, margin = 25)
+        .render()
         .writeImage(fileOut)
 
     val imageBytes = fileOut.toByteArray()
@@ -191,9 +192,9 @@ fun generateQRCode(gameId: String): Bitmap {
 //    }
 //}
 
-@Preview
-@Composable
-fun QrPrev() {
-    val bitmap = generateQRCode("test")
-    Image(modifier = Modifier.size(100.dp), bitmap = bitmap.asImageBitmap(), contentDescription = "test")
-}
+//@Preview
+//@Composable
+//fun QrPrev() {
+//    val bitmap = generateQRCode("test")
+//    Image(modifier = Modifier.size(100.dp), bitmap = bitmap.asImageBitmap(), contentDescription = "test")
+//}
