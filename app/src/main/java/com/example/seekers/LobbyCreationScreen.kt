@@ -1,5 +1,6 @@
 package com.example.seekers
 
+<<<<<<< HEAD
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -60,6 +61,8 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel()) {
                 val bitmap = generateQRCode(gameId)
                 println(bitmap.toString())
                 vm.addQr(bitmap, gameId)
+                navController.navigate(NavRoutes.LobbyCreationQR.route)
+
             }
         }
     }
@@ -198,3 +201,14 @@ fun generateQRCode(gameId: String): Bitmap {
 //    val bitmap = generateQRCode("test")
 //    Image(modifier = Modifier.size(100.dp), bitmap = bitmap.asImageBitmap(), contentDescription = "test")
 //}
+=======
+import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
+
+@Composable
+fun TestCreateLobby(navController: NavController) {
+    CustomButton(text = "Create Lobby") {
+     navController.navigate(NavRoutes.LobbyCreationQR.route)
+    }
+}
+>>>>>>> origin/lobby-creation-sam
