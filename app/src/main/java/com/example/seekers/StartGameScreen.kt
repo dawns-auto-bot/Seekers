@@ -28,7 +28,7 @@ fun StartAndJoinBtns(navController: NavController) {
             }
             Spacer(modifier = Modifier.height(50.dp))
             CustomButton(text = "Join lobby") {
-                navController.navigate(NavRoutes.JoinLobby.route)
+                navController.navigate(NavRoutes.Scanner.route)
             }
         }
     }

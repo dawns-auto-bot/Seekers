@@ -50,7 +50,7 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navContr
                 val geoPoint = GeoPoint(60.224165, 24.758388)
                 val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!)
                 val gameId = vm.addLobby(lobby)
-                navController.navigate(NavRoutes.Lobby.route + "/$gameId")
+                navController.navigate(NavRoutes.Lobby.route + "/$gameId/true")
             }
         }
     }
@@ -58,7 +58,6 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navContr
 
 class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(application) {
     val firestore = FirestoreHelper
-    val storage = FirebaseStorageHelper
     val maxPlayers = MutableLiveData<Int>()
     val timeLimit = MutableLiveData<Int>()
     val radius = MutableLiveData<Int>()
@@ -76,8 +75,6 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
     }
 
     fun addLobby(lobby: Lobby) = firestore.addLobby(lobby)
-
-    fun addQr(bitmap: Bitmap, name: String) = storage.uploadImg(bitmap, name)
 
 }
 
