@@ -5,5 +5,5 @@ sealed class NavRoutes(val route: String) {
     object MainScreen: NavRoutes("MainScreen")
     object LobbyCreation: NavRoutes("LobbyCreation")
     object JoinLobby: NavRoutes("JoinLobby")
-    object LobbyCreationQR: NavRoutes("LobbyCreationQR")
+    object Lobby: NavRoutes("Lobby")
 }

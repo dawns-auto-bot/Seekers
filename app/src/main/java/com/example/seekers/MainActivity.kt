@@ -7,9 +7,11 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.seekers.ui.theme.SeekersTheme
 import com.google.firebase.FirebaseApp
 
@@ -24,6 +26,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+@Composable
 fun MyAppNavHost() {
 
     val navController = rememberNavController()
@@ -42,18 +46,26 @@ fun MyAppNavHost() {
             TestJoinLobby()
         }
         composable(NavRoutes.LobbyCreation.route) {
-            TestCreateLobby(navController)
+            LobbyCreationScreen(navController = navController)
         }
-        composable(NavRoutes.LobbyCreationQR.route) {
-            MainQRScreen()
+        composable(
+            NavRoutes.Lobby.route + "/{gameId}",
+            arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+        ) {
+            val gameId = it.arguments!!.getString("gameId")!!
+            LobbyScreen(navController, gameId)
         }
     }
+}
 
+@Composable
 fun LoginBtn(navController: NavController) {
     Button(onClick = {
         navController.navigate(NavRoutes.StartGame.route)
     }) {
         Text(text = "fake login button")
+    }
+}
 
 @Composable
 fun MainScreen(navController: NavController) {

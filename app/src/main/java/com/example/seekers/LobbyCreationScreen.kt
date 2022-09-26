@@ -1,40 +1,33 @@
 package com.example.seekers
 
-<<<<<<< HEAD
+import androidx.navigation.NavController
+import com.example.seekers.general.CustomButton
+import com.example.seekers.general.generateQRCode
+
 import android.app.Application
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.GeoPoint
-import io.github.g0dkar.qrcode.QRCode
-import java.io.ByteArrayOutputStream
 
 @Composable
-fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel()) {
+fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navController: NavController) {
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
-    val scope = rememberCoroutineScope()
 
     Column(
         Modifier
@@ -57,12 +50,7 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel()) {
                 val geoPoint = GeoPoint(60.224165, 24.758388)
                 val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!)
                 val gameId = vm.addLobby(lobby)
-                println(gameId)
-                val bitmap = generateQRCode(gameId)
-                println(bitmap.toString())
-                vm.addQr(bitmap, gameId)
-                navController.navigate(NavRoutes.LobbyCreationQR.route)
-
+                navController.navigate(NavRoutes.Lobby.route + "/$gameId")
             }
         }
     }
@@ -146,18 +134,6 @@ fun Input(
     }
 }
 
-@Composable
-fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .height(50.dp)
-            .clip(RoundedCornerShape(25.dp)),
-        colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.White)
-    ) {
-        Text(text = text)
-    }
-}
 
 @Composable
 fun CustomSlider(
@@ -176,17 +152,6 @@ fun CustomSlider(
     }
 }
 
-fun generateQRCode(gameId: String): Bitmap {
-    val fileOut = ByteArrayOutputStream()
-
-    QRCode(gameId)
-        .render()
-        .writeImage(fileOut)
-
-    val imageBytes = fileOut.toByteArray()
-    return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-}
-
 //@Preview
 //@Composable
 //fun InputPreview() {
@@ -201,14 +166,3 @@ fun generateQRCode(gameId: String): Bitmap {
 //    val bitmap = generateQRCode("test")
 //    Image(modifier = Modifier.size(100.dp), bitmap = bitmap.asImageBitmap(), contentDescription = "test")
 //}
-=======
-import androidx.compose.runtime.Composable
-import androidx.navigation.NavController
-
-@Composable
-fun TestCreateLobby(navController: NavController) {
-    CustomButton(text = "Create Lobby") {
-     navController.navigate(NavRoutes.LobbyCreationQR.route)
-    }
-}
->>>>>>> origin/lobby-creation-sam

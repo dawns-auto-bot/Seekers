@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.seekers.general.CustomButton
 
 @Composable
 fun StartAndJoinBtns(navController: NavController) {
@@ -30,19 +31,5 @@ fun StartAndJoinBtns(navController: NavController) {
                 navController.navigate(NavRoutes.JoinLobby.route)
             }
         }
-    }
-}
-
-@Composable
-fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = modifier
-            .width(250.dp)
-            .height(50.dp)
-            .clip(RoundedCornerShape(25.dp)),
-        colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.Black)
-    ) {
-        Text(text = text)
     }
 }
