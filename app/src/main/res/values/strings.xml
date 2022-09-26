@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Seekers</string>
+    <string name="title_activity_start_game_screen">StartGameScreen</string>
 </resources>
