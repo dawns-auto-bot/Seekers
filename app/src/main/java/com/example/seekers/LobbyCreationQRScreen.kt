@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.Card
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,19 +22,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.seekers.ui.theme.avatarBackground
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 
 @Composable
-fun MainQRScreen() {
+fun MainQRScreen(viewModel: QRViewmodel = viewModel()) {
+    val gameId = ""
+    viewModel.getQR(gameId)
     val context = LocalContext.current
+    val qrBitmap by viewModel.qrBitmap.observeAsState()
+
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = "Scan to join!", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
-        QRCodeComponent()
+        qrBitmap?.let {
+            QRCodeComponent(it)
+        }
         Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
         Participants()
         CustomButton(text = "Start Game") {
@@ -42,10 +53,9 @@ fun MainQRScreen() {
 }
 
 @Composable
-fun QRCodeComponent() {
-    val bitmap = generateQRCode("testing").asImageBitmap()
+fun QRCodeComponent(bitmap: Bitmap) {
 
-    Image(bitmap = bitmap, contentDescription = "QR", modifier = Modifier.size(250.dp))
+    Image(bitmap = bitmap.asImageBitmap(), contentDescription = "QR", modifier = Modifier.size(250.dp))
 }
 
 fun generateQRCode(gameId: String): Bitmap {
@@ -126,6 +136,18 @@ fun PlayerCard(player: Player) {
 
             Spacer(modifier = Modifier.width(25.dp))
             Text(text = player.nickname)
+        }
+    }
+}
+
+class QRViewmodel(): ViewModel() {
+    val storage = FirebaseStorageHelper
+    val qrBitmap = MutableLiveData<Bitmap>()
+
+    fun getQR(gameId: String) {
+        storage.getQRCode(gameId).addOnSuccessListener {
+        val bitmap = BitmapFactory.decodeByteArray(it, 0, it.size)
+            qrBitmap.postValue(bitmap)
         }
     }
 }
