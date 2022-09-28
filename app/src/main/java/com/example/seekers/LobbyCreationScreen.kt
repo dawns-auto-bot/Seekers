@@ -2,10 +2,8 @@ package com.example.seekers
 
 import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
-import com.example.seekers.general.generateQRCode
 
 import android.app.Application
-import android.graphics.Bitmap
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -50,7 +48,7 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navContr
                 val geoPoint = GeoPoint(60.224165, 24.758388)
                 val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!)
                 val gameId = vm.addLobby(lobby)
-                navController.navigate(NavRoutes.Lobby.route + "/$gameId/true")
+                navController.navigate(NavRoutes.AvatarPicker.route + "?gameId=$gameId")
             }
         }
     }

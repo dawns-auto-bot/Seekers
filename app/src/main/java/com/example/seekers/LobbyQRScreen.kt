@@ -33,7 +33,7 @@ import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 
 @Composable
-fun LobbyScreen(
+fun LobbyQRScreen(
     navController: NavHostController,
     vm: LobbyViewModel = viewModel(),
     gameId: String,

@@ -3,6 +3,7 @@ package com.example.seekers.general
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonDefaults
@@ -31,6 +32,7 @@ fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Uni
     Button(
         onClick = onClick,
         modifier = modifier
+            .width(250.dp)
             .height(50.dp)
             .clip(RoundedCornerShape(25.dp)),
         colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.White)

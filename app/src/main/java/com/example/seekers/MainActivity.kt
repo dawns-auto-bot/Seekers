@@ -42,14 +42,25 @@ fun MyAppNavHost() {
         composable(NavRoutes.StartGame.route) {
             StartAndJoinBtns(navController)
         }
-        composable(NavRoutes.JoinLobby.route) {
-            JoinLobby(navController = navController)
+        // Avatar picker screen
+        composable(NavRoutes.AvatarPicker.route + "?gameId={gameId}",
+            arguments = listOf(
+                navArgument("gameId") {
+                    type = NavType.StringType
+                    nullable = true
+                }
+            )
+            ) {
+            val gameId = it.arguments?.getString("gameId")
+            AvatarPickerScreen(navController = navController, gameId = gameId)
         }
         composable(NavRoutes.LobbyCreation.route) {
             LobbyCreationScreen(navController = navController)
         }
+
+        //Lobby screen with QR
         composable(
-            NavRoutes.Lobby.route + "/{gameId}/{isCreator}",
+            NavRoutes.LobbyQR.route + "/{gameId}/{isCreator}",
             arguments = listOf(
                 navArgument("gameId") { type = NavType.StringType },
                 navArgument("isCreator") { type = NavType.BoolType }
@@ -57,10 +68,22 @@ fun MyAppNavHost() {
         ) {
             val gameId = it.arguments!!.getString("gameId")!!
             val isCreator = it.arguments!!.getBoolean("isCreator")
-            LobbyScreen(navController = navController, gameId = gameId, isCreator = isCreator)
+            LobbyQRScreen(navController = navController, gameId = gameId, isCreator = isCreator)
         }
-        composable(NavRoutes.Scanner.route) {
-            QrScannerScreen(navController)
+        //QR Scanner
+        composable(NavRoutes.Scanner.route + "/{nickname}/{avatarId}",
+            arguments = listOf(
+                navArgument("nickname") {
+                    type = NavType.StringType
+                },
+                navArgument("avatarId") {
+                    type = NavType.IntType
+                }
+            )
+        ) {
+            val nickname = it.arguments!!.getString("nickname")!!
+            val avatarId = it.arguments!!.getInt("avatarId")
+            QrScannerScreen(navController, nickname = nickname, avatarId = avatarId)
         }
     }
 }

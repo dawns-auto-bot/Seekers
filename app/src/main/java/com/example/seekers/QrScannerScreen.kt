@@ -1,7 +1,6 @@
 package com.example.seekers
 
 import android.Manifest
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.util.Log
 import android.widget.FrameLayout
@@ -24,7 +23,7 @@ import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
 
 @Composable
-fun QrScannerScreen(navController: NavHostController) {
+fun QrScannerScreen(navController: NavHostController, nickname: String, avatarId: Int) {
     val context = LocalContext.current
     var cameraIsAllowed by remember { mutableStateOf(false) }
     var gameId: String? by remember { mutableStateOf(null) }
@@ -52,7 +51,10 @@ fun QrScannerScreen(navController: NavHostController) {
 
     LaunchedEffect(gameId) {
         gameId?.let {
-            navController.navigate(NavRoutes.Lobby.route + "/$it/false")
+            val firestore = FirestoreHelper
+            val player = Player(nickname, avatarId, "159342", PlayerStatus.JOINED)
+            firestore.addPlayer(player, it)
+            navController.navigate(NavRoutes.LobbyQR.route + "/$it/false")
         }
     }
     

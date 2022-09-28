@@ -1,16 +1,11 @@
 package com.example.seekers
 
-import android.graphics.drawable.Drawable
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
@@ -19,14 +14,12 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.ui.theme.avatarBackground
@@ -35,7 +28,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun JoinLobby(vm: AvatarViewModel = viewModel(), navController: NavHostController) {
+fun AvatarPickerScreen(
+    vm: AvatarViewModel = viewModel(),
+    navController: NavHostController,
+    gameId: String?
+) {
 
     val avatarId by vm.avatarId.observeAsState(R.drawable.avatar_empty)
     val nickname by vm.nickname.observeAsState("")
@@ -98,7 +95,14 @@ fun JoinLobby(vm: AvatarViewModel = viewModel(), navController: NavHostControlle
             Spacer(modifier = Modifier.height(32.dp))
             CustomButton(text = "Join lobby") {
                 val avatarIndex = avatarList.indexOf(avatarId)
-                navController.navigate(NavRoutes.Scanner.route + "/$nickname/$avatarIndex")
+                if (gameId == null) {
+                    navController.navigate(NavRoutes.Scanner.route + "/$nickname/$avatarIndex")
+                } else {
+                    val player = Player(nickname, avatarIndex, "150", PlayerStatus.CREATOR)
+                    vm.addPlayer(player, gameId)
+                    navController.navigate(NavRoutes.LobbyQR.route + "/$gameId/true")
+                }
+
             }
         }
     }
@@ -158,4 +162,7 @@ fun BottomSheet(onPick: (Int) -> Unit) {
 class AvatarViewModel() : ViewModel() {
     val avatarId = MutableLiveData<Int>(R.drawable.avatar_empty)
     val nickname = MutableLiveData("")
+    val firestore = FirestoreHelper
+
+    fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
 }
