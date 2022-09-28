@@ -58,10 +58,6 @@ fun LobbyCreationScreen(
                     LobbyStatus.ACTIVE.value
                 )
                 val gameId = vm.addLobby(lobby)
-                vm.updateUser(
-                    playerId,
-                    mapOf(Pair("currentGameId", gameId))
-                )
                 navController.navigate(NavRoutes.AvatarPicker.route + "?gameId=$gameId")
             }
         }
@@ -87,10 +83,6 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
     }
 
     fun addLobby(lobby: Lobby) = firestore.addLobby(lobby)
-
-    fun updateUser(userId: String, changeMap: Map<String, Any>) =
-        firestore.updateUser(userId, changeMap)
-
 }
 
 @Composable

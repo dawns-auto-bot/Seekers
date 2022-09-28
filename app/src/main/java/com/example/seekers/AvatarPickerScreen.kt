@@ -100,6 +100,10 @@ fun AvatarPickerScreen(
                 } else {
                     val player = Player(nickname, avatarIndex, playerId, PlayerStatus.CREATOR.value)
                     vm.addPlayer(player, gameId)
+                    vm.updateUser(
+                        playerId,
+                        mapOf(Pair("currentGameId", gameId))
+                    )
                     navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
                 }
             }
@@ -164,4 +168,7 @@ class AvatarViewModel() : ViewModel() {
     val firestore = FirestoreHelper
 
     fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
+
+    fun updateUser(userId: String, changeMap: Map<String, Any>) =
+        firestore.updateUser(userId, changeMap)
 }
