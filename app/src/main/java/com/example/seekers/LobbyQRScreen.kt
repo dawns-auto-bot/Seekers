@@ -99,7 +99,7 @@ fun LobbyQRScreen(
         if (showDismissDialog) {
             DismissLobbyDialog(onDismissRequest = { showDismissDialog = false }, onConfirm = {
                 val changeMap = mapOf(
-                    Pair("status", LobbyStatus.DELETED)
+                    Pair("status", LobbyStatus.DELETED.value)
                 )
                 vm.updateLobby(changeMap, gameId)
             })
