@@ -106,10 +106,16 @@ fun LobbyQRScreen(
         ) {
             QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
             Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
-            Participants(Modifier.weight(3f).padding(horizontal = 15.dp), players, isCreator, vm, gameId)
-            CustomButton(modifier = Modifier.weight(1f), text = "Start Game") {
-                Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+            Participants(
+                Modifier
+                    .weight(3f)
+                    .padding(horizontal = 15.dp), players, isCreator, vm, gameId)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CustomButton(text = "Start Game") {
+                    Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+                }
             }
+
         }
         if (showLeaveDialog) {
             LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
