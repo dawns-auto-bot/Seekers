@@ -60,8 +60,11 @@ fun LobbyQRScreen(
     LaunchedEffect(lobby) {
         lobby?.let {
             if (it.status == LobbyStatus.DELETED.value) {
-                Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
-                    .show()
+                if (!isCreator) {
+                    Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
+                        .show()
+                }
+
                 navController.navigate(NavRoutes.StartGame.route)
             }
         }

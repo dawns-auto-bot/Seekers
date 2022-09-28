@@ -40,22 +40,30 @@ fun MyAppNavHost() {
             MainScreen(navController)
         }
         composable(NavRoutes.StartGame.route) {
-            StartAndJoinBtns(navController)
+            StartGameScreen(navController)
         }
         // Avatar picker screen
-        composable(NavRoutes.AvatarPicker.route + "?gameId={gameId}",
+        composable(
+            NavRoutes.AvatarPicker.route + "/{isCreator}",
             arguments = listOf(
-                navArgument("gameId") {
-                    type = NavType.StringType
-                    nullable = true
-                }
+                navArgument("isCreator") { type = NavType.BoolType }
             )
-            ) {
-            val gameId = it.arguments?.getString("gameId")
-            AvatarPickerScreen(navController = navController, gameId = gameId)
+        ) {
+            val isCreator = it.arguments!!.getBoolean("isCreator")
+            AvatarPickerScreen(navController = navController, isCreator = isCreator)
         }
-        composable(NavRoutes.LobbyCreation.route) {
-            LobbyCreationScreen(navController = navController)
+        composable(NavRoutes.LobbyCreation.route + "/{nickname}/{avatarId}",
+            arguments = listOf(
+                navArgument("nickname") {
+                    type = NavType.StringType
+                },
+                navArgument("avatarId") {
+                    type = NavType.IntType
+                }
+            )) {
+            val nickname = it.arguments!!.getString("nickname")!!
+            val avatarId = it.arguments!!.getInt("avatarId")
+            LobbyCreationScreen(navController = navController, nickname = nickname, avatarId = avatarId)
         }
 
         //Lobby screen with QR

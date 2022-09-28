@@ -23,7 +23,7 @@ import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
 
 @Composable
-fun StartAndJoinBtns(navController: NavController, vm: StartGameViewModel = viewModel()) {
+fun StartGameScreen(navController: NavController, vm: StartGameViewModel = viewModel()) {
     val currentGameId by vm.currentGameId.observeAsState()
 
     LaunchedEffect(Unit) {
@@ -45,11 +45,11 @@ fun StartAndJoinBtns(navController: NavController, vm: StartGameViewModel = view
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CustomButton(text = "Create lobby") {
-                navController.navigate(NavRoutes.LobbyCreation.route)
+                navController.navigate(NavRoutes.AvatarPicker.route + "/true")
             }
             Spacer(modifier = Modifier.height(50.dp))
             CustomButton(text = "Join lobby") {
-                navController.navigate(NavRoutes.AvatarPicker.route)
+                navController.navigate(NavRoutes.AvatarPicker.route+ "/false")
             }
         }
     }
