@@ -5,6 +5,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,6 +65,14 @@ fun LobbyQRScreen(
         }
     }
 
+    LaunchedEffect(players) {
+        val currentPlayer = players.find { it.playerId == "testuser" }
+        if(currentPlayer == null) {
+            Toast.makeText(context, "You were kicked from the lobby", Toast.LENGTH_LONG).show()
+            navController.navigate(NavRoutes.StartGame.route)
+        }
+    }
+
 
     Scaffold(topBar = {
         TopAppBar(
@@ -92,7 +102,7 @@ fun LobbyQRScreen(
         ) {
             QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
             Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
-            Participants(Modifier.weight(3f), players)
+            Participants(Modifier.weight(3f), players, isCreator, vm, gameId)
             CustomButton(modifier = Modifier.weight(1f), text = "Start Game") {
                 Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
             }
@@ -169,21 +179,23 @@ fun QRCodeComponent(modifier: Modifier = Modifier, bitmap: Bitmap) {
 
 
 @Composable
-fun Participants(modifier: Modifier = Modifier, players: List<Player>) {
+fun Participants(modifier: Modifier = Modifier, players: List<Player>, isCreator: Boolean, vm: LobbyViewModel, gameId: String) {
 
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         items(players) { player ->
-            PlayerCard(player = player)
+            PlayerCard(player = player, isCreator = isCreator, vm, gameId = gameId)
         }
     }
 
 }
 
 @Composable
-fun PlayerCard(player: Player) {
+fun PlayerCard(player: Player, isCreator: Boolean, vm: LobbyViewModel, gameId: String) {
+
+    val showRemovePlayerBtn by vm.showRemovePlayerBtn.observeAsState(false)
 
     val avaratID = when (player.avatarId) {
         0 -> R.drawable.bee
@@ -208,13 +220,19 @@ fun PlayerCard(player: Player) {
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Card(
                 shape = CircleShape,
                 border = BorderStroke(2.dp, Color.Black),
                 backgroundColor = avatarBackground,
-                modifier = Modifier.padding(10.dp)
-
+                modifier = Modifier
+                    .padding(10.dp)
+                    .clickable {
+                        if (isCreator) {
+                            vm.updateRemoveBtn(true)
+                        }
+                    }
             ) {
                 Image(
                     painter = painterResource(id = avaratID),
@@ -225,8 +243,18 @@ fun PlayerCard(player: Player) {
                 )
             }
 
-            Spacer(modifier = Modifier.width(25.dp))
             Text(text = player.nickname)
+            if (showRemovePlayerBtn && player.status == PlayerStatus.PLAYING.value) {
+                Button(
+                    onClick = {
+                              vm.removePlayer(gameId = gameId, player.playerId)
+                    },
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White),
+                    modifier = Modifier.padding(10.dp)
+                ) {
+                    Text(text = "Kick")
+                }
+            }
         }
     }
 }
@@ -237,6 +265,13 @@ class LobbyViewModel() : ViewModel() {
     val players = MutableLiveData(listOf<Player>())
     val lobby = MutableLiveData<Lobby>()
     val isCreator = MutableLiveData<Boolean>()
+
+    private val _showRemovePlayerBtn = MutableLiveData(false)
+    val showRemovePlayerBtn: LiveData<Boolean> = _showRemovePlayerBtn
+
+    fun updateRemoveBtn(value: Boolean) {
+        _showRemovePlayerBtn.value = value
+    }
 
     fun removePlayer(gameId: String, playerId: String) =
         firestore.removePlayer(gameId = gameId, playerId = playerId)
