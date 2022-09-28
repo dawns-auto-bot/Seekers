@@ -46,7 +46,7 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navContr
         ) {
             if (maxPlayers != null && timeLimit != null && radius != null) {
                 val geoPoint = GeoPoint(60.224165, 24.758388)
-                val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!)
+                val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!, LobbyStatus.ACTIVE.value)
                 val gameId = vm.addLobby(lobby)
                 navController.navigate(NavRoutes.AvatarPicker.route + "?gameId=$gameId")
             }

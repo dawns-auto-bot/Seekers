@@ -35,7 +35,7 @@ fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Uni
             .width(250.dp)
             .height(50.dp)
             .clip(RoundedCornerShape(25.dp)),
-        colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.White)
+        colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.Black)
     ) {
         Text(text = text)
     }

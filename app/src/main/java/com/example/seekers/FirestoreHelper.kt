@@ -32,6 +32,18 @@ object FirestoreHelper {
         return ref.id
     }
 
+    fun updateLobby(changeMap: Map<String, Any>, gameId: String) {
+        val ref = lobbyRef.document(gameId)
+        ref
+            .update(changeMap)
+            .addOnSuccessListener {
+                Log.d(TAG, "update: " + "success (${ref.id})")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "update: ", it)
+            }
+    }
+
     fun getLobby(gameId: String): DocumentReference {
         return lobbyRef.document(gameId)
     }
@@ -51,6 +63,12 @@ object FirestoreHelper {
     fun getPlayers(gameId: String): CollectionReference {
         return lobbyRef.document(gameId).collection("players")
     }
+
+    fun removePlayer(gameId: String, playerId: String) {
+        val playerRef = lobbyRef.document(gameId).collection("players").document(playerId)
+        playerRef.delete()
+    }
+
 }
 
 class Lobby(
@@ -58,15 +76,22 @@ class Lobby(
     val center: GeoPoint = GeoPoint(0.0, 0.0),
     val maxPlayers: Int = 0,
     val timeLimit: Int = 0,
-    val radius: Int = 0
+    val radius: Int = 0,
+    val status: Int = 0
 ) : Serializable
 
 class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "", status: Int = 0) : Serializable
 
-object PlayerStatus {
-    const val CREATOR = 0
-    const val JOINED = 1
-    const val SEEKER = 2
-    const val PLAYING = 3
-    const val ELIMINATED = 4
+enum class PlayerStatus(val value: Int) {
+    CREATOR(0),
+    JOINED(1),
+    SEEKER(2),
+    PLAYING(3),
+    ELIMINATED(4)
+}
+
+enum class LobbyStatus(val value: Int) {
+    ACTIVE(0),
+    FINISHED(1),
+    DELETED(2),
 }

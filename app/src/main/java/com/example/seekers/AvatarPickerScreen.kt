@@ -93,16 +93,15 @@ fun AvatarPickerScreen(
                 vm.nickname.value = it
             })
             Spacer(modifier = Modifier.height(32.dp))
-            CustomButton(text = "Join lobby") {
+            CustomButton(text = gameId?.let { "Continue" } ?: "Join lobby") {
                 val avatarIndex = avatarList.indexOf(avatarId)
                 if (gameId == null) {
                     navController.navigate(NavRoutes.Scanner.route + "/$nickname/$avatarIndex")
                 } else {
-                    val player = Player(nickname, avatarIndex, "150", PlayerStatus.CREATOR)
+                    val player = Player(nickname, avatarIndex, "150", PlayerStatus.CREATOR.value)
                     vm.addPlayer(player, gameId)
                     navController.navigate(NavRoutes.LobbyQR.route + "/$gameId/true")
                 }
-
             }
         }
     }

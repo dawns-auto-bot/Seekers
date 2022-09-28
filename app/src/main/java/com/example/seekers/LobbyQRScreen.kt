@@ -1,7 +1,6 @@
 package com.example.seekers
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -10,8 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Card
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -29,8 +27,6 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
-import io.github.g0dkar.qrcode.QRCode
-import java.io.ByteArrayOutputStream
 
 @Composable
 fun LobbyQRScreen(
@@ -42,58 +38,126 @@ fun LobbyQRScreen(
     val context = LocalContext.current
     val bitmap = generateQRCode(gameId)
     val players by vm.players.observeAsState(listOf())
-    val uid = "salkfj355w3r"
-    val uid1 = "ksajflskjflk3r4324"
+    val lobby by vm.lobby.observeAsState()
+    var showLeaveDialog by remember { mutableStateOf(false) }
+    var showDismissDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val player = if (isCreator) {
-            Player(
-                nickname = "test",
-                playerId = uid,
-                avatarId = 3,
-                status = PlayerStatus.CREATOR
-            )
-        } else {
-            Player(
-                nickname = "test1",
-                playerId = uid1,
-                avatarId = 1,
-                status = PlayerStatus.JOINED
-            )
-        }
-        vm.addPlayer(player, gameId)
         vm.getPlayers(gameId)
+        vm.getLobby(gameId)
     }
 
-    Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Scan to join!", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
-        QRCodeComponent(bitmap)
-        Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
-        Participants(players)
-        CustomButton(text = "Start Game") {
-            Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+    LaunchedEffect(lobby) {
+        lobby?.let {
+            if (it.status == LobbyStatus.DELETED.value) {
+                Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG).show()
+                navController.navigate(NavRoutes.StartGame.route)
+            }
         }
     }
+
+
+    Scaffold(topBar = {
+        TopAppBar(
+            title = {
+                Text(text = "Scan to join!", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
+            },
+            actions = {
+                Button(onClick = {
+                    if (isCreator) {
+                        showDismissDialog = true
+                    } else {
+                        showLeaveDialog = true
+                    }
+                }) {
+                    Text(text = "Leave")
+                }
+            },
+            backgroundColor = Color.Transparent,
+            elevation = 0.dp
+        )
+    }
+    ) {
+        Column(
+            Modifier.padding(it),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
+            Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
+            Participants(Modifier.weight(3f), players)
+            CustomButton(modifier = Modifier.weight(1f), text = "Start Game") {
+                Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+            }
+        }
+        if (showLeaveDialog) {
+            LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
+                vm.removePlayer(gameId, "")
+                navController.navigate(NavRoutes.StartGame.route)
+            })
+        }
+        if (showDismissDialog) {
+            DismissLobbyDialog(onDismissRequest = { showDismissDialog = false }, onConfirm = {
+                val changeMap = mapOf(
+                    Pair("status", LobbyStatus.DELETED)
+                )
+                vm.updateLobby(changeMap, gameId)
+            })
+        }
+    }
+
 }
 
 @Composable
-fun QRCodeComponent(bitmap: Bitmap) {
+fun LeaveGameDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        title = { Text(text = "Quit?") }, text = { Text(text = "Are you sure you want to leave?") }, onDismissRequest = onDismissRequest,
+        dismissButton = {
+                        Button(onClick = { onDismissRequest() }) {
+                            Text(text = "Cancel")
+                        }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm() }) {
+                Text(text = "Leave")
+            }
+        }
+    )
+}
+
+@Composable
+fun DismissLobbyDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        title = { Text(text = "Quit?") }, text = { Text(text = "Are you sure you want to dismiss this lobby?") }, onDismissRequest = onDismissRequest,
+        dismissButton = {
+            Button(onClick = { onDismissRequest() }) {
+                Text(text = "Keep")
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm() }) {
+                Text(text = "Dismiss")
+            }
+        }
+    )
+}
+
+@Composable
+fun QRCodeComponent(modifier: Modifier = Modifier, bitmap: Bitmap) {
 
     Image(
         bitmap = bitmap.asImageBitmap(),
         contentDescription = "QR",
-        modifier = Modifier.size(250.dp)
+        modifier = modifier.size(250.dp)
     )
 }
 
 
 @Composable
-fun Participants(players: List<Player>) {
+fun Participants(modifier: Modifier = Modifier, players: List<Player>) {
 
     LazyColumn(
+        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         items(players) { player ->
@@ -156,13 +220,15 @@ class LobbyViewModel() : ViewModel() {
     val TAG = "LobbyVM"
     val firestore = FirestoreHelper
     val players = MutableLiveData(listOf<Player>())
+    val lobby = MutableLiveData<Lobby>()
 
-    fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
+    fun removePlayer(gameId: String, playerId: String) =
+        firestore.removePlayer(gameId = gameId, playerId = playerId)
 
     fun getPlayers(gameId: String) {
         firestore.getPlayers(gameId)
             .addSnapshotListener { list, e ->
-                list?: run {
+                list ?: run {
                     Log.e(TAG, "getPlayers: ", e)
                     return@addSnapshotListener
                 }
@@ -170,5 +236,15 @@ class LobbyViewModel() : ViewModel() {
                 players.postValue(playerList)
             }
     }
+
+    fun getLobby(gameId: String) {
+        firestore.getLobby(gameId).addSnapshotListener { data, e ->
+            data?.let {
+                 lobby.postValue(it.toObject(Lobby::class.java))
+            }
+        }
+    }
+
+    fun updateLobby(changeMap: Map<String, Any>, gameId: String) = firestore.updateLobby(changeMap, gameId)
 
 }
