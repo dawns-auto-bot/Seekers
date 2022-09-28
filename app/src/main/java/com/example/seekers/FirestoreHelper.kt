@@ -80,7 +80,7 @@ class Lobby(
     val status: Int = 0
 ) : Serializable
 
-class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "", status: Int = 0) : Serializable
+class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "",val status: Int = 0) : Serializable
 
 enum class PlayerStatus(val value: Int) {
     CREATOR(0),
