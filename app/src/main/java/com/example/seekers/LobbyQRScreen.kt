@@ -27,24 +27,31 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
+import com.google.firebase.firestore.ktx.toObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun LobbyQRScreen(
     navController: NavHostController,
     vm: LobbyViewModel = viewModel(),
     gameId: String,
-    isCreator: Boolean
 ) {
     val context = LocalContext.current
     val bitmap = generateQRCode(gameId)
     val players by vm.players.observeAsState(listOf())
     val lobby by vm.lobby.observeAsState()
+    val isCreator by vm.isCreator.observeAsState(false)
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        vm.getPlayers(gameId)
-        vm.getLobby(gameId)
+        scope.launch(Dispatchers.IO) {
+            vm.getPlayers(gameId)
+            vm.getLobby(gameId)
+            vm.getPlayer(gameId, playerId)
+        }
     }
 
     LaunchedEffect(lobby) {
@@ -93,6 +100,10 @@ fun LobbyQRScreen(
         if (showLeaveDialog) {
             LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
                 vm.removePlayer(gameId, "")
+                vm.updateUser(
+                    playerId,
+                    mapOf(Pair("currentGameId", ""))
+                )
                 navController.navigate(NavRoutes.StartGame.route)
             })
         }
@@ -100,6 +111,10 @@ fun LobbyQRScreen(
             DismissLobbyDialog(onDismissRequest = { showDismissDialog = false }, onConfirm = {
                 val changeMap = mapOf(
                     Pair("status", LobbyStatus.DELETED.value)
+                )
+                vm.updateUser(
+                    playerId,
+                    mapOf(Pair("currentGameId", ""))
                 )
                 vm.updateLobby(changeMap, gameId)
             })
@@ -221,6 +236,7 @@ class LobbyViewModel() : ViewModel() {
     val firestore = FirestoreHelper
     val players = MutableLiveData(listOf<Player>())
     val lobby = MutableLiveData<Lobby>()
+    val isCreator = MutableLiveData<Boolean>()
 
     fun removePlayer(gameId: String, playerId: String) =
         firestore.removePlayer(gameId = gameId, playerId = playerId)
@@ -246,5 +262,21 @@ class LobbyViewModel() : ViewModel() {
     }
 
     fun updateLobby(changeMap: Map<String, Any>, gameId: String) = firestore.updateLobby(changeMap, gameId)
+
+    fun getPlayer(gameId: String, playerId: String) {
+        firestore.getPlayer(gameId, playerId).get()
+            .addOnSuccessListener { data ->
+                val player = data.toObject(Player::class.java)
+                player?.let {
+                    isCreator.postValue(it.status == PlayerStatus.CREATOR.value)
+                }
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "getPlayer: ", it)
+            }
+    }
+
+    fun updateUser(userId: String, changeMap: Map<String, Any>) =
+        firestore.updateUser(userId, changeMap)
 
 }

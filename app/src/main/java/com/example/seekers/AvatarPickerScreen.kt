@@ -98,9 +98,9 @@ fun AvatarPickerScreen(
                 if (gameId == null) {
                     navController.navigate(NavRoutes.Scanner.route + "/$nickname/$avatarIndex")
                 } else {
-                    val player = Player(nickname, avatarIndex, "150", PlayerStatus.CREATOR.value)
+                    val player = Player(nickname, avatarIndex, playerId, PlayerStatus.CREATOR.value)
                     vm.addPlayer(player, gameId)
-                    navController.navigate(NavRoutes.LobbyQR.route + "/$gameId/true")
+                    navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
                 }
             }
         }

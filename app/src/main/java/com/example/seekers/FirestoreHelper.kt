@@ -11,11 +11,12 @@ import com.google.firebase.ktx.Firebase
 import java.io.Serializable
 
 object FirestoreHelper {
-    val lobbyRef = Firebase.firestore.collection("lobbies")
+    val lobbiesRef = Firebase.firestore.collection("lobbies")
+    val usersRef = Firebase.firestore.collection("users")
     val TAG = "firestoreHelper"
 
     fun addLobby(lobby: Lobby): String {
-        val ref = lobbyRef.document()
+        val ref = lobbiesRef.document()
         val lobbyWithId = lobby.apply {
             id = ref.id
         }
@@ -33,7 +34,7 @@ object FirestoreHelper {
     }
 
     fun updateLobby(changeMap: Map<String, Any>, gameId: String) {
-        val ref = lobbyRef.document(gameId)
+        val ref = lobbiesRef.document(gameId)
         ref
             .update(changeMap)
             .addOnSuccessListener {
@@ -45,11 +46,11 @@ object FirestoreHelper {
     }
 
     fun getLobby(gameId: String): DocumentReference {
-        return lobbyRef.document(gameId)
+        return lobbiesRef.document(gameId)
     }
 
     fun addPlayer(player: Player, gameId: String) {
-        val playerRef = lobbyRef.document(gameId).collection("players").document(player.playerId)
+        val playerRef = lobbiesRef.document(gameId).collection("players").document(player.playerId)
         playerRef
             .set(player)
             .addOnSuccessListener {
@@ -61,12 +62,28 @@ object FirestoreHelper {
     }
 
     fun getPlayers(gameId: String): CollectionReference {
-        return lobbyRef.document(gameId).collection("players")
+        return lobbiesRef.document(gameId).collection("players")
+    }
+
+    fun getPlayer(gameId: String, playerId: String): DocumentReference {
+        return lobbiesRef.document(gameId).collection("players").document(playerId)
     }
 
     fun removePlayer(gameId: String, playerId: String) {
-        val playerRef = lobbyRef.document(gameId).collection("players").document(playerId)
+        val playerRef = lobbiesRef.document(gameId).collection("players").document(playerId)
         playerRef.delete()
+    }
+
+    fun getUser(playerId: String): DocumentReference {
+        return usersRef.document(playerId)
+    }
+
+    fun updateUser(userId: String, changeMap: Map<String, Any>) {
+        usersRef.document(userId)
+            .update(changeMap)
+            .addOnSuccessListener {
+                Log.d(TAG, "updateUser: $userId updated successfully")
+            }
     }
 
 }
@@ -80,7 +97,7 @@ class Lobby(
     val status: Int = 0
 ) : Serializable
 
-class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "", status: Int = 0) : Serializable
+class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "", val status: Int = 0) : Serializable
 
 enum class PlayerStatus(val value: Int) {
     CREATOR(0),
@@ -95,3 +112,5 @@ enum class LobbyStatus(val value: Int) {
     FINISHED(1),
     DELETED(2),
 }
+
+val playerId = "testGamer"

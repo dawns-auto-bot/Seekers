@@ -60,15 +60,13 @@ fun MyAppNavHost() {
 
         //Lobby screen with QR
         composable(
-            NavRoutes.LobbyQR.route + "/{gameId}/{isCreator}",
+            NavRoutes.LobbyQR.route + "/{gameId}",
             arguments = listOf(
                 navArgument("gameId") { type = NavType.StringType },
-                navArgument("isCreator") { type = NavType.BoolType }
             )
         ) {
             val gameId = it.arguments!!.getString("gameId")!!
-            val isCreator = it.arguments!!.getBoolean("isCreator")
-            LobbyQRScreen(navController = navController, gameId = gameId, isCreator = isCreator)
+            LobbyQRScreen(navController = navController, gameId = gameId)
         }
         //QR Scanner
         composable(NavRoutes.Scanner.route + "/{nickname}/{avatarId}",

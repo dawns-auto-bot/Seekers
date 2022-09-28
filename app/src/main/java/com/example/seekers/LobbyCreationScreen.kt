@@ -22,7 +22,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.GeoPoint
 
 @Composable
-fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navController: NavController) {
+fun LobbyCreationScreen(
+    vm: LobbyCreationScreenViewModel = viewModel(),
+    navController: NavController
+) {
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
@@ -46,8 +49,19 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navContr
         ) {
             if (maxPlayers != null && timeLimit != null && radius != null) {
                 val geoPoint = GeoPoint(60.224165, 24.758388)
-                val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!, LobbyStatus.ACTIVE.value)
+                val lobby = Lobby(
+                    "",
+                    geoPoint,
+                    maxPlayers!!,
+                    timeLimit!!,
+                    radius!!,
+                    LobbyStatus.ACTIVE.value
+                )
                 val gameId = vm.addLobby(lobby)
+                vm.updateUser(
+                    playerId,
+                    mapOf(Pair("currentGameId", gameId))
+                )
                 navController.navigate(NavRoutes.AvatarPicker.route + "?gameId=$gameId")
             }
         }
@@ -73,6 +87,9 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
     }
 
     fun addLobby(lobby: Lobby) = firestore.addLobby(lobby)
+
+    fun updateUser(userId: String, changeMap: Map<String, Any>) =
+        firestore.updateUser(userId, changeMap)
 
 }
 
