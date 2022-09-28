@@ -49,11 +49,18 @@ fun MyAppNavHost() {
             LobbyCreationScreen(navController = navController)
         }
         composable(
-            NavRoutes.Lobby.route + "/{gameId}",
-            arguments = listOf(navArgument("gameId") { type = NavType.StringType })
+            NavRoutes.Lobby.route + "/{gameId}/{isCreator}",
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+                navArgument("isCreator") { type = NavType.BoolType }
+            )
         ) {
             val gameId = it.arguments!!.getString("gameId")!!
-            LobbyScreen(navController, gameId)
+            val isCreator = it.arguments!!.getBoolean("isCreator")
+            LobbyScreen(navController = navController, gameId = gameId, isCreator = isCreator)
+        }
+        composable(NavRoutes.Scanner.route) {
+            QrScannerScreen(navController)
         }
     }
 }

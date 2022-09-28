@@ -2,6 +2,7 @@ package com.example.seekers
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -32,9 +33,37 @@ import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 
 @Composable
-fun LobbyScreen(navController: NavHostController, gameId: String) {
+fun LobbyScreen(
+    navController: NavHostController,
+    vm: LobbyViewModel = viewModel(),
+    gameId: String,
+    isCreator: Boolean
+) {
     val context = LocalContext.current
     val bitmap = generateQRCode(gameId)
+    val players by vm.players.observeAsState(listOf())
+    val uid = "salkfj355w3r"
+    val uid1 = "ksajflskjflk3r4324"
+
+    LaunchedEffect(Unit) {
+        val player = if (isCreator) {
+            Player(
+                nickname = "test",
+                playerId = uid,
+                avatarId = 3,
+                status = PlayerStatus.CREATOR
+            )
+        } else {
+            Player(
+                nickname = "test1",
+                playerId = uid1,
+                avatarId = 1,
+                status = PlayerStatus.JOINED
+            )
+        }
+        vm.addPlayer(player, gameId)
+        vm.getPlayers(gameId)
+    }
 
     Column(
         verticalArrangement = Arrangement.Center,
@@ -43,7 +72,7 @@ fun LobbyScreen(navController: NavHostController, gameId: String) {
         Text(text = "Scan to join!", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
         QRCodeComponent(bitmap)
         Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
-        Participants()
+        Participants(players)
         CustomButton(text = "Start Game") {
             Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
         }
@@ -62,19 +91,12 @@ fun QRCodeComponent(bitmap: Bitmap) {
 
 
 @Composable
-fun Participants() {
-    val player1 = Player("Sam", 1, "playerId1")
-    val player2 = Player("Souly", 2, "playerId2")
-    val player3 = Player("Mikko", 3, "playerId3")
-    val player4 = Player("Miro", 4, "playerId4")
-    val player5 = Player("Nam", 5, "playerId5")
-    val player6 = Player("Jarkko", 6, "playerId6")
-    val playerList = listOf<Player>(player1, player2, player3, player4, player5, player6)
+fun Participants(players: List<Player>) {
 
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        items(playerList) { player ->
+        items(players) { player ->
             PlayerCard(player = player)
         }
     }
@@ -97,9 +119,6 @@ fun PlayerCard(player: Player) {
         9 -> R.drawable.lion
         10 -> R.drawable.penguin
         else -> R.drawable.whale
-
-
-
     }
 
     Card(
@@ -133,5 +152,23 @@ fun PlayerCard(player: Player) {
     }
 }
 
-class QRViewmodel() : ViewModel() {
+class LobbyViewModel() : ViewModel() {
+    val TAG = "LobbyVM"
+    val firestore = FirestoreHelper
+    val players = MutableLiveData(listOf<Player>())
+
+    fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
+
+    fun getPlayers(gameId: String) {
+        firestore.getPlayers(gameId)
+            .addSnapshotListener { list, e ->
+                list?: run {
+                    Log.e(TAG, "getPlayers: ", e)
+                    return@addSnapshotListener
+                }
+                val playerList = list.toObjects(Player::class.java)
+                players.postValue(playerList)
+            }
+    }
+
 }

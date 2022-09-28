@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavHostController
 import com.budiyev.android.codescanner.AutoFocusMode
 import com.budiyev.android.codescanner.CodeScanner
 import com.budiyev.android.codescanner.CodeScannerView
@@ -23,9 +24,10 @@ import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
 
 @Composable
-fun QrScannerScreen() {
+fun QrScannerScreen(navController: NavHostController) {
     val context = LocalContext.current
     var cameraIsAllowed by remember { mutableStateOf(false) }
+    var gameId: String? by remember { mutableStateOf(null) }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -47,6 +49,12 @@ fun QrScannerScreen() {
             cameraIsAllowed = true
         }
     }
+
+    LaunchedEffect(gameId) {
+        gameId?.let {
+            navController.navigate(NavRoutes.Lobby.route + "/$it/false")
+        }
+    }
     
     if (cameraIsAllowed) {
         val scannerView = CodeScannerView(context)
@@ -58,9 +66,9 @@ fun QrScannerScreen() {
         codeScanner.isAutoFocusEnabled = true
         codeScanner.isFlashEnabled = false
         codeScanner.decodeCallback = DecodeCallback {
-            println(it.text)
             codeScanner.stopPreview()
             codeScanner.releaseResources()
+            gameId = it.text
         }
         codeScanner.errorCallback = ErrorCallback { // or ErrorCallback.SUPPRESS
             Log.e("qrScanner", "QrScannerScreen: ", it)
