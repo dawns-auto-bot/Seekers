@@ -22,7 +22,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.GeoPoint
 
 @Composable
-fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), mapvm: MapViewModel = viewModel(), navController: NavController) {
+fun LobbyCreationScreen(
+    vm: LobbyCreationScreenViewModel = viewModel(),
+    mapvm: MapViewModel = viewModel(),
+    navController: NavController,
+    nickname: String,
+    avatarId: Int
+) {
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
@@ -45,11 +51,24 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), mapvm: M
             modifier = Modifier.fillMaxWidth(),
             text = stringResource(id = R.string.create_lobby)
         ) {
-            if (maxPlayers != null && timeLimit != null && radius != null && center != null) {
+            if (maxPlayers != null && timeLimit != null && radius != null) {
                 val geoPoint = GeoPoint(center!!.latitude, center!!.longitude)
-                val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!, LobbyStatus.ACTIVE.value)
+                val lobby = Lobby(
+                    "",
+                    geoPoint,
+                    maxPlayers!!,
+                    timeLimit!!,
+                    radius!!,
+                    LobbyStatus.ACTIVE.value
+                )
                 val gameId = vm.addLobby(lobby)
-                navController.navigate(NavRoutes.AvatarPicker.route + "?gameId=$gameId")
+                val player = Player(nickname, avatarId, playerId, PlayerStatus.CREATOR.value)
+                vm.addPlayer(player, gameId)
+                vm.updateUser(
+                    playerId,
+                    mapOf(Pair("currentGameId", gameId))
+                )
+                navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
             }
         }
     }
@@ -75,6 +94,10 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
 
     fun addLobby(lobby: Lobby) = firestore.addLobby(lobby)
 
+    fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
+
+    fun updateUser(userId: String, changeMap: Map<String, Any>) =
+        firestore.updateUser(userId, changeMap)
 }
 
 @Composable
@@ -95,14 +118,12 @@ fun CreationForm(vm: LobbyCreationScreenViewModel) {
             value = timeLimit?.toString() ?: "",
             keyboardType = KeyboardType.Number,
             onChangeValue = { vm.updateTimeLimit(it.toIntOrNull()) })
-        /*
+
         Input(
             title = stringResource(id = R.string.radius),
             value = radius?.toString() ?: "",
             keyboardType = KeyboardType.Number,
             onChangeValue = { vm.updateRadius(it.toIntOrNull()) })
-
-         */
     }
 }
 

@@ -31,7 +31,7 @@ import kotlinx.coroutines.launch
 fun AvatarPickerScreen(
     vm: AvatarViewModel = viewModel(),
     navController: NavHostController,
-    gameId: String?
+    isCreator: Boolean,
 ) {
 
     val avatarId by vm.avatarId.observeAsState(R.drawable.avatar_empty)
@@ -93,14 +93,12 @@ fun AvatarPickerScreen(
                 vm.nickname.value = it
             })
             Spacer(modifier = Modifier.height(32.dp))
-            CustomButton(text = gameId?.let { "Continue" } ?: "Join lobby") {
+            CustomButton(text = if (isCreator)"Continue" else "Join lobby") {
                 val avatarIndex = avatarList.indexOf(avatarId)
-                if (gameId == null) {
+                if (!isCreator) {
                     navController.navigate(NavRoutes.Scanner.route + "/$nickname/$avatarIndex")
                 } else {
-                    val player = Player(nickname, avatarIndex, "150", PlayerStatus.CREATOR.value)
-                    vm.addPlayer(player, gameId)
-                    navController.navigate(NavRoutes.LobbyQR.route + "/$gameId/true")
+                    navController.navigate(NavRoutes.LobbyCreation.route + "/$nickname/$avatarIndex")
                 }
             }
         }
@@ -108,7 +106,7 @@ fun AvatarPickerScreen(
 
 }
 
-var avatarList = listOf<Int>(
+var avatarList = listOf(
     R.drawable.bee,
     R.drawable.chameleon,
     R.drawable.chick,
@@ -162,6 +160,4 @@ class AvatarViewModel() : ViewModel() {
     val avatarId = MutableLiveData<Int>(R.drawable.avatar_empty)
     val nickname = MutableLiveData("")
     val firestore = FirestoreHelper
-
-    fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
 }

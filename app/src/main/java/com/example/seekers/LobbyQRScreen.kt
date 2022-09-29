@@ -5,21 +5,25 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,30 +31,50 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun LobbyQRScreen(
     navController: NavHostController,
     vm: LobbyViewModel = viewModel(),
     gameId: String,
-    isCreator: Boolean
 ) {
     val context = LocalContext.current
     val bitmap = generateQRCode(gameId)
     val players by vm.players.observeAsState(listOf())
     val lobby by vm.lobby.observeAsState()
+    val isCreator by vm.isCreator.observeAsState(false)
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        vm.getPlayers(gameId)
-        vm.getLobby(gameId)
+        scope.launch(Dispatchers.IO) {
+            vm.getPlayers(gameId)
+            vm.getLobby(gameId)
+            vm.getPlayer(gameId, playerId)
+        }
     }
 
     LaunchedEffect(lobby) {
         lobby?.let {
             if (it.status == LobbyStatus.DELETED.value) {
-                Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG).show()
+                if (!isCreator) {
+                    Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
+                        .show()
+                }
+
+                navController.navigate(NavRoutes.StartGame.route)
+            }
+        }
+    }
+
+    LaunchedEffect(players) {
+        if (players.isNotEmpty()) {
+            val currentPlayer = players.find { it.playerId == playerId }
+            if (currentPlayer == null) {
+                Toast.makeText(context, "You were kicked from the lobby", Toast.LENGTH_LONG).show()
                 navController.navigate(NavRoutes.StartGame.route)
             }
         }
@@ -85,14 +109,24 @@ fun LobbyQRScreen(
         ) {
             QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
             Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
-            Participants(Modifier.weight(3f), players)
-            CustomButton(modifier = Modifier.weight(1f), text = "Start Game") {
-                Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+            Participants(
+                Modifier
+                    .weight(3f)
+                    .padding(horizontal = 15.dp), players, isCreator, vm, gameId)
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                CustomButton(text = "Start Game") {
+                    Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+                }
             }
+
         }
         if (showLeaveDialog) {
             LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
                 vm.removePlayer(gameId, "")
+                vm.updateUser(
+                    playerId,
+                    mapOf(Pair("currentGameId", ""))
+                )
                 navController.navigate(NavRoutes.StartGame.route)
             })
         }
@@ -100,6 +134,10 @@ fun LobbyQRScreen(
             DismissLobbyDialog(onDismissRequest = { showDismissDialog = false }, onConfirm = {
                 val changeMap = mapOf(
                     Pair("status", LobbyStatus.DELETED.value)
+                )
+                vm.updateUser(
+                    playerId,
+                    mapOf(Pair("currentGameId", ""))
                 )
                 vm.updateLobby(changeMap, gameId)
             })
@@ -111,11 +149,13 @@ fun LobbyQRScreen(
 @Composable
 fun LeaveGameDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
-        title = { Text(text = "Quit?") }, text = { Text(text = "Are you sure you want to leave?") }, onDismissRequest = onDismissRequest,
+        title = { Text(text = "Quit?") },
+        text = { Text(text = "Are you sure you want to leave?") },
+        onDismissRequest = onDismissRequest,
         dismissButton = {
-                        Button(onClick = { onDismissRequest() }) {
-                            Text(text = "Cancel")
-                        }
+            Button(onClick = { onDismissRequest() }) {
+                Text(text = "Cancel")
+            }
         },
         confirmButton = {
             Button(onClick = { onConfirm() }) {
@@ -128,7 +168,9 @@ fun LeaveGameDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
 @Composable
 fun DismissLobbyDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
-        title = { Text(text = "Quit?") }, text = { Text(text = "Are you sure you want to dismiss this lobby?") }, onDismissRequest = onDismissRequest,
+        title = { Text(text = "Quit?") },
+        text = { Text(text = "Are you sure you want to dismiss this lobby?") },
+        onDismissRequest = onDismissRequest,
         dismissButton = {
             Button(onClick = { onDismissRequest() }) {
                 Text(text = "Keep")
@@ -154,21 +196,42 @@ fun QRCodeComponent(modifier: Modifier = Modifier, bitmap: Bitmap) {
 
 
 @Composable
-fun Participants(modifier: Modifier = Modifier, players: List<Player>) {
+fun Participants(
+    modifier: Modifier = Modifier,
+    players: List<Player>,
+    isCreator: Boolean,
+    vm: LobbyViewModel,
+    gameId: String
+) {
+    var kickableIndex: Int? by remember { mutableStateOf(null) }
 
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        items(players) { player ->
-            PlayerCard(player = player)
+        itemsIndexed(players.sortedBy { it.status }) { index, player ->
+            PlayerCard(
+                player = player,
+                isCreator = isCreator,
+                vm,
+                gameId = gameId,
+                setKickableIndex = { kickableIndex = index },
+                isKickable = kickableIndex == index
+            )
         }
     }
 
 }
 
 @Composable
-fun PlayerCard(player: Player) {
+fun PlayerCard(
+    player: Player,
+    isCreator: Boolean,
+    vm: LobbyViewModel,
+    gameId: String,
+    setKickableIndex: () -> Unit,
+    isKickable: Boolean
+) {
 
     val avaratID = when (player.avatarId) {
         0 -> R.drawable.bee
@@ -187,19 +250,25 @@ fun PlayerCard(player: Player) {
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(15.dp),
+            .fillMaxWidth(),
         elevation = 10.dp
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .clickable {
+                if (isCreator) {
+                    setKickableIndex()
+                }
+            }
         ) {
             Card(
                 shape = CircleShape,
                 border = BorderStroke(2.dp, Color.Black),
                 backgroundColor = avatarBackground,
-                modifier = Modifier.padding(10.dp)
-
+                modifier = Modifier
+                    .padding(10.dp)
             ) {
                 Image(
                     painter = painterResource(id = avaratID),
@@ -209,9 +278,31 @@ fun PlayerCard(player: Player) {
                         .padding(10.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.width(25.dp))
-            Text(text = player.nickname)
+            Text(text = "${player.nickname} ${if (player.status == PlayerStatus.CREATOR.value) "(Host)" else ""}")
+            if (isKickable && player.status == PlayerStatus.JOINED.value) {
+                Button(
+                    onClick = {
+                        vm.removePlayer(gameId = gameId, player.playerId)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.Red,
+                        contentColor = Color.White
+                    ),
+                    modifier = Modifier
+                        .padding(10.dp)
+                ) {
+                    Text(text = "Kick")
+                }
+            } else {
+                Button(
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .alpha(0f),
+                    onClick = {},
+                ) {
+                    Text(text = "Kick")
+                }
+            }
         }
     }
 }
@@ -221,6 +312,14 @@ class LobbyViewModel() : ViewModel() {
     val firestore = FirestoreHelper
     val players = MutableLiveData(listOf<Player>())
     val lobby = MutableLiveData<Lobby>()
+    val isCreator = MutableLiveData<Boolean>()
+
+    private val _showRemovePlayerBtn = MutableLiveData(false)
+    val showRemovePlayerBtn: LiveData<Boolean> = _showRemovePlayerBtn
+
+    fun updateRemoveBtn(value: Boolean) {
+        _showRemovePlayerBtn.value = value
+    }
 
     fun removePlayer(gameId: String, playerId: String) =
         firestore.removePlayer(gameId = gameId, playerId = playerId)
@@ -240,11 +339,28 @@ class LobbyViewModel() : ViewModel() {
     fun getLobby(gameId: String) {
         firestore.getLobby(gameId).addSnapshotListener { data, e ->
             data?.let {
-                 lobby.postValue(it.toObject(Lobby::class.java))
+                lobby.postValue(it.toObject(Lobby::class.java))
             }
         }
     }
 
-    fun updateLobby(changeMap: Map<String, Any>, gameId: String) = firestore.updateLobby(changeMap, gameId)
+    fun updateLobby(changeMap: Map<String, Any>, gameId: String) =
+        firestore.updateLobby(changeMap, gameId)
+
+    fun getPlayer(gameId: String, playerId: String) {
+        firestore.getPlayer(gameId, playerId).get()
+            .addOnSuccessListener { data ->
+                val player = data.toObject(Player::class.java)
+                player?.let {
+                    isCreator.postValue(it.status == PlayerStatus.CREATOR.value)
+                }
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "getPlayer: ", it)
+            }
+    }
+
+    fun updateUser(userId: String, changeMap: Map<String, Any>) =
+        firestore.updateUser(userId, changeMap)
 
 }
