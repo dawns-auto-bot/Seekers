@@ -1,5 +1,9 @@
 package com.example.seekers.general
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.layout.height
@@ -13,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 
@@ -25,6 +31,13 @@ fun generateQRCode(gameId: String): Bitmap {
 
     val imageBytes = fileOut.toByteArray()
     return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+}
+
+fun getLocationPermission(context: Context) {
+    if ((ContextCompat.checkSelfPermission(context,
+            Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
+        ActivityCompat.requestPermissions(context as Activity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 0)
+    }
 }
 
 @Composable

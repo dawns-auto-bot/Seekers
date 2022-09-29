@@ -22,10 +22,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.firestore.GeoPoint
 
 @Composable
-fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navController: NavController) {
+fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), mapvm: MapViewModel = viewModel(), navController: NavController) {
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
+    val center by mapvm.playAreaCenter.observeAsState()
 
     Column(
         Modifier
@@ -38,14 +39,14 @@ fun LobbyCreationScreen(vm: LobbyCreationScreenViewModel = viewModel(), navContr
             text = stringResource(id = R.string.lobby_creation),
             style = MaterialTheme.typography.h6
         )
-
+        Map(vm = mapvm, lobbyvm = vm, true)
         CreationForm(vm = vm)
         CustomButton(
             modifier = Modifier.fillMaxWidth(),
             text = stringResource(id = R.string.create_lobby)
         ) {
-            if (maxPlayers != null && timeLimit != null && radius != null) {
-                val geoPoint = GeoPoint(60.224165, 24.758388)
+            if (maxPlayers != null && timeLimit != null && radius != null && center != null) {
+                val geoPoint = GeoPoint(center!!.latitude, center!!.longitude)
                 val lobby = Lobby("", geoPoint, maxPlayers!!, timeLimit!!, radius!!, LobbyStatus.ACTIVE.value)
                 val gameId = vm.addLobby(lobby)
                 navController.navigate(NavRoutes.AvatarPicker.route + "?gameId=$gameId")
@@ -94,12 +95,14 @@ fun CreationForm(vm: LobbyCreationScreenViewModel) {
             value = timeLimit?.toString() ?: "",
             keyboardType = KeyboardType.Number,
             onChangeValue = { vm.updateTimeLimit(it.toIntOrNull()) })
-
+        /*
         Input(
             title = stringResource(id = R.string.radius),
             value = radius?.toString() ?: "",
             keyboardType = KeyboardType.Number,
             onChangeValue = { vm.updateRadius(it.toIntOrNull()) })
+
+         */
     }
 }
 

@@ -5,9 +5,7 @@ import android.app.Application
 import android.location.Location
 import android.os.Looper
 import android.util.Log
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Slider
 import androidx.compose.material.Text
@@ -17,9 +15,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.seekers.general.CustomButton
 import com.example.seekers.ui.theme.*
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.CameraPosition
@@ -31,12 +32,14 @@ import java.util.*
 @Composable
 fun Map(
     vm: MapViewModel = viewModel(),
+    lobbyvm: LobbyCreationScreenViewModel = viewModel(),
     mapControl: Boolean
 ) {
     val locationData: Location? by vm.locationData.observeAsState(null)
     val playAreaCenter: LatLng? by vm.playAreaCenter.observeAsState(null)
     val playAreaRadius: Double? by vm.playAreaRadius.observeAsState(0.0)
-    var sliderPosition by remember { mutableStateOf(50f) }
+    var sliderPosition by remember { mutableStateOf(100f) }
+    var mapActive by remember { mutableStateOf(true) }
 
     vm.startLocationUpdates()
 
@@ -64,38 +67,31 @@ fun Map(
             position = CameraPosition.fromLatLngZoom(latLng, 17F)
         }
     }
-
-    Column(Modifier.fillMaxSize()) {
-
-        Slider(value = sliderPosition, onValueChange = { sliderPosition = it }, valueRange = 50f..200f)
-        Row() {
-            Button(onClick = {
-                vm.updateCenter(LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude))
-                vm.updateRadius(sliderPosition.toDouble())
-                Log.d("DEBUG", "center: ${cameraPositionState.position.target.latitude}, ${cameraPositionState.position.target.longitude} - radius: ${sliderPosition.toDouble()}")
-            }) {
-                Text("Set play area")
-            }
-            Button(onClick = {
-                vm.removeLocationUpdates()
-                Log.d("DEBUG", "center $playAreaCenter, radius $playAreaRadius")
-            }) {
-                Text("Stop Location Updates")
+    if(mapActive) {
+        Box(Modifier.fillMaxWidth().height(200.dp)) {
+            GoogleMap(
+                cameraPositionState = cameraPositionState,
+                properties = properties,
+                uiSettings = uiSettings
+            ) { Circle(
+                    center = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude),
+                    radius = sliderPosition.toDouble(),
+                    fillColor = Color(0x19FFDE00),
+                    strokeColor = Color(0x8DBDA500)
+                )
             }
         }
-
-
-        GoogleMap(
-            cameraPositionState = cameraPositionState,
-            properties = properties,
-            uiSettings = uiSettings
+        Slider(value = sliderPosition, onValueChange = { sliderPosition = it;  }, valueRange = 50f..200f)
+        CustomButton(
+            modifier = Modifier.fillMaxWidth(),
+            text = "Set play area"
         ) {
-            Circle(
-                center = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude),
-                radius = sliderPosition.toDouble(),
-                fillColor = Color(0x19FFDE00),
-                strokeColor = Color(0x8DBDA500)
-            )
+
+            vm.updateCenter(LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude))
+            // vm.updateRadius(sliderPosition.toDouble())
+            lobbyvm.updateRadius(sliderPosition.toInt())
+            Log.d("DEBUG", "center: ${cameraPositionState.position.target.latitude}, ${cameraPositionState.position.target.longitude} - radius: ${sliderPosition.toDouble()}")
+            mapActive = false
         }
     }
 }
@@ -109,6 +105,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             priority = Priority.PRIORITY_HIGH_ACCURACY
         }
     }
+
     val locationData: MutableLiveData<Location> = MutableLiveData<Location>(null)
     val playAreaCenter: MutableLiveData<LatLng> = MutableLiveData<LatLng>(null)
     val playAreaRadius: MutableLiveData<Double> = MutableLiveData(0.0)
