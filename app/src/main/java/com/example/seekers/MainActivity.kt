@@ -61,6 +61,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 
 class MainActivity : ComponentActivity() {
 
@@ -213,6 +214,7 @@ fun MainScreen(navController: NavController) {
     val launcher = googleRememberFirebaseAuthLauncher(
         onAuthComplete = {
             authenticationViewModel.setUser(it.user)
+            navController.navigate(NavRoutes.StartGame.route)
         },
         onAuthError = {
             authenticationViewModel.setUser(null)
@@ -225,14 +227,16 @@ fun MainScreen(navController: NavController) {
     val snackBarHostState = remember { SnackbarHostState() }
     Column (horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
-    ){
+    ) {
         if (loggedInUser == null) {
-            Card(modifier = Modifier
-                .padding(30.dp)
-
+            Card(
+                modifier = Modifier
+                    .padding(30.dp)
+                    .background(Color.White)
             ) {
-                Column(modifier = Modifier
-                    .padding(30.dp),
+                Column(
+                    modifier = Modifier
+                        .padding(30.dp),
                 ) {
                     OutlinedTextField(
                         value = email,
@@ -275,12 +279,12 @@ fun MainScreen(navController: NavController) {
                             )
                                 .addOnCompleteListener() {
                                     authenticationViewModel.setUser(auth.currentUser)
+                                    navController.navigate(NavRoutes.StartGame.route)
                                 }
                         }
                     }
                     )
                     {
-
                         Text(text = "Create an account", color = Color.White)
                     }
                 }
@@ -288,7 +292,6 @@ fun MainScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = {
-
                     val gso =
                         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                             .requestIdToken(token)
@@ -301,29 +304,29 @@ fun MainScreen(navController: NavController) {
 
                     )
             ) {
-                /*Image(
+                Image(
                     painter = painterResource(id = R.drawable.google_logo),
                     contentDescription = "Google logo"
-                )*/
+                )
 
                 Text(
                     "Sign in with google",
                     modifier = Modifier.padding(start = 10.dp)
                 )
-
             }
 
-        } else {
-            Text("Welcome ${loggedInUser!!.displayName}")
+        } else{
             Button(onClick = {
                 authenticationViewModel.logOut()
-                //Firebase.auth.signOut()
-                //firebaseUser = null
             }) {
                 Text("Sign out")
             }
+            Button(onClick = {
+                navController.navigate(NavRoutes.StartGame.route)
+            }) {
+                Text("Start game")
+            }
         }
-
     }
 }
 
@@ -344,6 +347,7 @@ class AuthenticationViewModel(auth: FirebaseAuth) : ViewModel() {
         fireBaseAuth.signOut()
         user.value = null
     }
+
 }
 
 @Composable
