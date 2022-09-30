@@ -5,6 +5,7 @@ import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
+import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -62,6 +63,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
 
@@ -220,75 +222,13 @@ fun MainScreen(navController: NavController) {
             authenticationViewModel.setUser(null)
         }
     )
-    var email by remember { mutableStateOf(TextFieldValue("")) }
-    var password by remember { mutableStateOf(TextFieldValue("")) }
-    val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
-    val snackBarHostState = remember { SnackbarHostState() }
+
     Column (horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxHeight()
     ) {
         if (loggedInUser == null) {
-            Card(
-                modifier = Modifier
-                    .padding(30.dp)
-                    .background(Color.White)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(30.dp),
-                ) {
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = { focusManager.clearFocus() }),
-                        label = { Text(text = "email") },
-                        placeholder = { Text(text = "email") },
-                        //modifier = Modifier.weight(0.5F)
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = { focusManager.clearFocus() }),
-                        label = { Text(text = "password") },
-                        placeholder = { Text(text = "password") },
-                        //modifier = Modifier.weight(0.5F)
-                    )
-
-                    Button(onClick = {
-                        if (email.text == "" || password.text == "") {
-                            scope.launch {
-                                snackBarHostState.showSnackbar(
-                                    "Please give an email and a password",
-                                    "!",
-                                    SnackbarDuration.Short,
-                                )
-                            }
-                        } else {
-                            auth.createUserWithEmailAndPassword(
-                                email.text,
-                                password.text
-                            )
-                                .addOnCompleteListener() {
-                                    authenticationViewModel.setUser(auth.currentUser)
-                                    navController.navigate(NavRoutes.StartGame.route)
-                                }
-                        }
-                    }
-                    )
-                    {
-                        Text(text = "Create an account", color = Color.White)
-                    }
-                }
-            }
+            CreateUserForm(model = authenticationViewModel, auth = auth, navController = navController)
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = {
@@ -310,8 +250,7 @@ fun MainScreen(navController: NavController) {
                 )
 
                 Text(
-                    "Sign in with google",
-                    modifier = Modifier.padding(start = 10.dp)
+                    "Sign in with google", fontSize = 18.sp
                 )
             }
 
@@ -328,6 +267,89 @@ fun MainScreen(navController: NavController) {
             }
         }
     }
+}
+
+@Composable
+fun CreateUserForm(
+    model: AuthenticationViewModel = viewModel(),
+    auth: FirebaseAuth,
+    navController: NavController
+){
+
+    var email by remember { mutableStateOf(TextFieldValue("")) }
+    var password by remember { mutableStateOf(TextFieldValue("")) }
+    val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+    val snackBarHostState = remember { SnackbarHostState() }
+
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 30.dp)
+            .background(Color.White)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(30.dp),
+        ) {
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }),
+                label = { Text(text = "Email") },
+                placeholder = { Text(text = "Email") },
+                //modifier = Modifier.weight(0.5F)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }),
+                label = { Text(text = "Password") },
+                placeholder = { Text(text = "Password") },
+                //modifier = Modifier.weight(0.5F)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.Center, modifier=Modifier.fillMaxWidth()){
+                Button(onClick = {
+                if (email.text == "" || password.text == "") {
+                    scope.launch {
+                        snackBarHostState.showSnackbar(
+                            "Please give an email and a password",
+                            "!",
+                            SnackbarDuration.Short,
+                        )
+                    }
+                } else {
+                    auth.createUserWithEmailAndPassword(
+                        email.text,
+                        password.text
+                    )
+                        .addOnCompleteListener() {
+                            model.setUser(auth.currentUser)
+                            navController.navigate(NavRoutes.StartGame.route)
+                        }
+                }
+            }, contentPadding = PaddingValues(15.dp)
+            )
+            {
+                Text(text = "Create an account", fontSize = 18.sp)
+
+            }
+        }}
+    }
+}
+
+@Composable
+fun GoogleButton(){
+
 }
 
 class AuthenticationViewModel(auth: FirebaseAuth) : ViewModel() {
