@@ -63,7 +63,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
+import com.example.seekers.general.CustomButton
 
 class MainActivity : ComponentActivity() {
 
@@ -239,18 +242,15 @@ fun MainScreen(navController: NavController) {
                             .build()
                     val googleSignInClient = GoogleSignIn.getClient(context, gso)
                     launcher.launch(googleSignInClient.signInIntent)
-                }, colors = ButtonDefaults.buttonColors(
-                    backgroundColor = Color.White,
-
-                    )
+                },
+                colors = ButtonDefaults.buttonColors(Color.White)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.google_logo),
                     contentDescription = "Google logo"
                 )
-
                 Text(
-                    "Sign in with google", fontSize = 18.sp
+                    "Sign in with google", fontSize = 17.sp
                 )
             }
 
@@ -318,7 +318,7 @@ fun CreateUserForm(
             )
             Spacer(modifier = Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.Center, modifier=Modifier.fillMaxWidth()){
-                Button(onClick = {
+                CustomButton(onClick = {
                 if (email.text == "" || password.text == "") {
                     scope.launch {
                         snackBarHostState.showSnackbar(
@@ -337,12 +337,9 @@ fun CreateUserForm(
                             navController.navigate(NavRoutes.StartGame.route)
                         }
                 }
-            }, contentPadding = PaddingValues(15.dp)
-            )
-            {
-                Text(text = "Create an account", fontSize = 18.sp)
-
             }
+                    , text = "Create an account"
+            )
         }}
     }
 }
