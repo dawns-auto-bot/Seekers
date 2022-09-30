@@ -64,7 +64,7 @@ fun LobbyQRScreen(
                     Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
                         .show()
                 }
-
+                vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
                 navController.navigate(NavRoutes.StartGame.route)
             }
         }
@@ -75,6 +75,7 @@ fun LobbyQRScreen(
             val currentPlayer = players.find { it.playerId == playerId }
             if (currentPlayer == null) {
                 Toast.makeText(context, "You were kicked from the lobby", Toast.LENGTH_LONG).show()
+                vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
                 navController.navigate(NavRoutes.StartGame.route)
             }
         }

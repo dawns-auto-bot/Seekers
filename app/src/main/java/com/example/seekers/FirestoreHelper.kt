@@ -77,10 +77,18 @@ object FirestoreHelper {
     fun getUser(playerId: String): DocumentReference {
         return usersRef.document(playerId)
     }
+    
+    fun addUser(map: HashMap<String, String>, uid: String) {
+        usersRef.document(uid)
+            .set(map)
+            .addOnSuccessListener {
+                Log.d(TAG, "addUser: $uid")
+            }
+    }
 
     fun updateUser(userId: String, changeMap: Map<String, Any>) {
         usersRef.document(userId)
-            .update(changeMap)
+            .set(changeMap)
             .addOnSuccessListener {
                 Log.d(TAG, "updateUser: $userId updated successfully")
             }
@@ -113,4 +121,4 @@ enum class LobbyStatus(val value: Int) {
     DELETED(2),
 }
 
-val playerId = "testGamer2"
+val playerId = "bob"
