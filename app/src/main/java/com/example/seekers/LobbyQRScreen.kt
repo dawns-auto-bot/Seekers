@@ -103,9 +103,9 @@ fun LobbyQRScreen(
             navigationIcon = {
                 IconButton(onClick = {
                     if (showQR) {
-                        vm.UpdateQRImageVisibility(false)
+                        vm.updateQRImageVisibility(false)
                     } else {
-                        vm.UpdateQRImageVisibility(true)
+                        vm.updateQRImageVisibility(true)
                     }
                 }) {
                     Icon(Icons.Outlined.QrCode2, "QR", modifier = Modifier.size(40.dp))
@@ -144,10 +144,8 @@ fun LobbyQRScreen(
             )
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Column() {
-                    CustomButton(text = "Edit Rules") {
-                        if (isCreator) {
-                            showEditRulesDialog = true
-                        }
+                    CustomButton(text = "${if (isCreator) "Edit" else "Check"} Rules") {
+                        showEditRulesDialog = true
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     CustomButton(text = "Start Game") {
@@ -159,7 +157,11 @@ fun LobbyQRScreen(
 
         }
         if (showEditRulesDialog) {
-            EditRulesDialog(vm, gameId, onDismissRequest = { showEditRulesDialog = false })
+            EditRulesDialog(
+                vm,
+                gameId,
+                isCreator,
+                onDismissRequest = { showEditRulesDialog = false })
         }
         if (showLeaveDialog) {
             LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
@@ -188,7 +190,12 @@ fun LobbyQRScreen(
 }
 
 @Composable
-fun EditRulesDialog(vm: LobbyViewModel, gameId: String, onDismissRequest: () -> Unit) {
+fun EditRulesDialog(
+    vm: LobbyViewModel,
+    gameId: String,
+    isCreator: Boolean,
+    onDismissRequest: () -> Unit
+) {
     val context = LocalContext.current
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
@@ -208,7 +215,7 @@ fun EditRulesDialog(vm: LobbyViewModel, gameId: String, onDismissRequest: () -> 
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Edit Rules")
+                        Text(text = "${if (isCreator) "Edit" else "Check"} Rules")
                         Icon(
                             imageVector = Icons.Filled.Cancel,
                             contentDescription = "close dialog",
@@ -219,26 +226,41 @@ fun EditRulesDialog(vm: LobbyViewModel, gameId: String, onDismissRequest: () -> 
                         )
                     }
                     Spacer(modifier = Modifier.height(20.dp))
-                    EditRulesForm(vm = vm)
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
-                        CustomButton(text = "Save") {
-                            if (maxPlayers != null && timeLimit != null && radius != null) {
-                                val changeMap = mapOf(
-                                    Pair("maxPlayers", maxPlayers!!),
-                                    Pair("timeLimit", timeLimit!!),
-                                    Pair("radius", radius!!)
-                                )
-                                vm.updateLobby(changeMap, gameId = gameId)
-                                Toast.makeText(context, "Game rules updated", Toast.LENGTH_LONG)
-                                    .show()
-                                onDismissRequest()
+                    if (isCreator) {
+                        EditRulesForm(vm = vm)
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
+                            CustomButton(text = "Save") {
+                                if (maxPlayers != null && timeLimit != null && radius != null) {
+                                    val changeMap = mapOf(
+                                        Pair("maxPlayers", maxPlayers!!),
+                                        Pair("timeLimit", timeLimit!!),
+                                        Pair("radius", radius!!)
+                                    )
+                                    vm.updateLobby(changeMap, gameId = gameId)
+                                    Toast.makeText(context, "Game rules updated", Toast.LENGTH_LONG)
+                                        .show()
+                                    onDismissRequest()
+                                }
                             }
                         }
+                    } else {
+                        ShowRules(vm = vm)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ShowRules(vm: LobbyViewModel) {
+    val lobby by vm.lobby.observeAsState()
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(text = "Maximum amount of players: ${lobby?.maxPlayers}")
+        Text(text = "Time limit: ${lobby?.timeLimit}")
+        Text(text = "Play area radius: ${lobby?.radius}")
     }
 }
 
@@ -355,7 +377,6 @@ fun PlayerCard(
     setKickableIndex: () -> Unit,
     isKickable: Boolean
 ) {
-
     val avaratID = when (player.avatarId) {
         0 -> R.drawable.bee
         1 -> R.drawable.chameleon
@@ -370,6 +391,8 @@ fun PlayerCard(
         10 -> R.drawable.penguin
         else -> R.drawable.whale
     }
+
+
 
     Card(
         modifier = Modifier
@@ -453,7 +476,7 @@ class LobbyViewModel() : ViewModel() {
         radius.value = newVal
     }
 
-    fun UpdateQRImageVisibility(value: Boolean) {
+    fun updateQRImageVisibility(value: Boolean) {
         showQR.postValue(value)
     }
 
