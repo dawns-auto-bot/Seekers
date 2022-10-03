@@ -204,6 +204,8 @@ fun MyAppNavHost() {
             QrScannerScreen(navController, nickname = nickname, avatarId = avatarId)
         }
     }
+
+
 }
 
 @Composable
