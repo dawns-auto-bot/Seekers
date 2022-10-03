@@ -5,6 +5,8 @@ import android.os.Parcelable
 import android.util.Log
 import com.google.android.gms.tasks.Task
 import com.google.firebase.FirebaseApp
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.*
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -14,6 +16,7 @@ object FirestoreHelper {
     val lobbiesRef = Firebase.firestore.collection("lobbies")
     val usersRef = Firebase.firestore.collection("users")
     val TAG = "firestoreHelper"
+    val uid get() = Firebase.auth.uid
 
     fun addLobby(lobby: Lobby): String {
         val ref = lobbiesRef.document()
@@ -102,7 +105,9 @@ class Lobby(
     val maxPlayers: Int = 0,
     val timeLimit: Int = 0,
     val radius: Int = 0,
-    val status: Int = 0
+    val status: Int = 0,
+    val startTime: Timestamp = Timestamp.now(),
+    val countdown: Int = 0
 ) : Serializable
 
 class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "",val status: Int = 0) : Serializable
@@ -117,8 +122,9 @@ enum class PlayerStatus(val value: Int) {
 
 enum class LobbyStatus(val value: Int) {
     ACTIVE(0),
-    FINISHED(1),
-    DELETED(2),
+    COUNTDOWN(1),
+    FINISHED(2),
+    DELETED(3),
 }
 
 val playerId = "bob"

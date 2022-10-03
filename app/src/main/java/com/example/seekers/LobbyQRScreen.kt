@@ -31,8 +31,13 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldValue
+import com.google.type.DateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.util.*
 
 @Composable
 fun LobbyQRScreen(
@@ -48,7 +53,6 @@ fun LobbyQRScreen(
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-
     LaunchedEffect(Unit) {
         scope.launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
@@ -67,6 +71,16 @@ fun LobbyQRScreen(
                 vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
                 navController.navigate(NavRoutes.StartGame.route)
             }
+
+            if (it.status == LobbyStatus.COUNTDOWN.value) {
+                // val startTime = it.startTime
+                val startTime = Timestamp.now()
+                val now = Timestamp.now()
+                //val countdown = it.countdown
+                val countdown = 30
+                val timeLeft = countdown - (now.toDate().time - startTime.toDate().time)/1000
+                navController.navigate(NavRoutes.Countdown.route + "/$timeLeft")
+            }
         }
     }
 
@@ -80,7 +94,6 @@ fun LobbyQRScreen(
             }
         }
     }
-
 
     Scaffold(topBar = {
         TopAppBar(
@@ -113,10 +126,17 @@ fun LobbyQRScreen(
             Participants(
                 Modifier
                     .weight(3f)
-                    .padding(horizontal = 15.dp), players, isCreator, vm, gameId)
+                    .padding(horizontal = 15.dp), players, isCreator, vm, gameId
+            )
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 CustomButton(text = "Start Game") {
-                    Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+                    vm.updateLobby(
+                        mapOf(
+                            Pair("status", LobbyStatus.COUNTDOWN.value),
+                            Pair("startTime", FieldValue.serverTimestamp())
+                        ),
+                        gameId
+                    )
                 }
             }
 
@@ -259,10 +279,10 @@ fun PlayerCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .clickable {
-                if (isCreator) {
-                    setKickableIndex()
+                    if (isCreator) {
+                        setKickableIndex()
+                    }
                 }
-            }
         ) {
             Card(
                 shape = CircleShape,
@@ -314,6 +334,7 @@ class LobbyViewModel() : ViewModel() {
     val players = MutableLiveData(listOf<Player>())
     val lobby = MutableLiveData<Lobby>()
     val isCreator = MutableLiveData<Boolean>()
+    val playerId = firestore.uid
 
     private val _showRemovePlayerBtn = MutableLiveData(false)
     val showRemovePlayerBtn: LiveData<Boolean> = _showRemovePlayerBtn

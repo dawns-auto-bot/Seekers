@@ -196,6 +196,15 @@ fun MyAppNavHost() {
             val avatarId = it.arguments!!.getInt("avatarId")
             QrScannerScreen(navController, nickname = nickname, avatarId = avatarId)
         }
+
+        //Countdown
+        composable(NavRoutes.Countdown.route + "/{seconds}",
+            arguments = listOf(
+                navArgument("seconds") { type = NavType.IntType }
+            )) {
+            val seconds = it.arguments!!.getInt("seconds")
+            CountdownScreen(seconds = seconds, navController = navController)
+        }
     }
 }
 
