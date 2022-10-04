@@ -32,6 +32,7 @@ fun LobbyCreationScreen(
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
+    val countdown by vm.countdown.observeAsState()
     val center by mapvm.playAreaCenter.observeAsState()
 
     Column(
@@ -51,11 +52,12 @@ fun LobbyCreationScreen(
             modifier = Modifier.fillMaxWidth(),
             text = stringResource(id = R.string.create_lobby)
         ) {
-            if (maxPlayers != null && timeLimit != null && radius != null) {
+            if (maxPlayers != null && timeLimit != null && radius != null && countdown != null) {
                 val geoPoint = GeoPoint(center!!.latitude, center!!.longitude)
                 val lobby = Lobby(
                     "",
                     geoPoint,
+                    countdown!!,
                     maxPlayers!!,
                     timeLimit!!,
                     radius!!,
@@ -79,6 +81,7 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
     val maxPlayers = MutableLiveData<Int>()
     val timeLimit = MutableLiveData<Int>()
     val radius = MutableLiveData<Int>()
+    val countdown = MutableLiveData<Int>()
 
     fun updateMaxPlayers(newVal: Int?) {
         maxPlayers.value = newVal
@@ -90,6 +93,10 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
 
     fun updateRadius(newVal: Int?) {
         radius.value = newVal
+    }
+
+    fun updateCountdown(newVal: Int?) {
+        countdown.value = newVal
     }
 
     fun addLobby(lobby: Lobby) = firestore.addLobby(lobby)
@@ -105,6 +112,8 @@ fun CreationForm(vm: LobbyCreationScreenViewModel) {
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
+    val countdown by vm.countdown.observeAsState()
+
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Input(
@@ -124,6 +133,12 @@ fun CreationForm(vm: LobbyCreationScreenViewModel) {
             value = radius?.toString() ?: "",
             keyboardType = KeyboardType.Number,
             onChangeValue = { vm.updateRadius(it.toIntOrNull()) })
+
+        Input(
+            title = stringResource(id = R.string.countdown),
+            value = countdown?.toString() ?: "",
+            keyboardType = KeyboardType.Number,
+            onChangeValue = { vm.updateCountdown(it.toIntOrNull()) })
     }
 }
 

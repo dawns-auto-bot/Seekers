@@ -149,6 +149,7 @@ fun LobbyQRScreen(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     CustomButton(text = "Start Game") {
+                        navController.navigate(NavRoutes.Radar.route + "/$gameId")
                         Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT)
                             .show()
                     }
@@ -200,6 +201,7 @@ fun EditRulesDialog(
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
+    val countdown by vm.countdown.observeAsState()
 
     Dialog(onDismissRequest) {
         Surface(
@@ -231,16 +233,20 @@ fun EditRulesDialog(
                         Spacer(modifier = Modifier.height(20.dp))
                         Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
                             CustomButton(text = "Save") {
-                                if (maxPlayers != null && timeLimit != null && radius != null) {
+                                if (maxPlayers != null && timeLimit != null && radius != null && countdown != null) {
                                     val changeMap = mapOf(
                                         Pair("maxPlayers", maxPlayers!!),
                                         Pair("timeLimit", timeLimit!!),
-                                        Pair("radius", radius!!)
+                                        Pair("radius", radius!!),
+                                        Pair("countdown", countdown!!)
                                     )
                                     vm.updateLobby(changeMap, gameId = gameId)
                                     Toast.makeText(context, "Game rules updated", Toast.LENGTH_LONG)
                                         .show()
                                     onDismissRequest()
+                                } else {
+                                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT)
+                                        .show()
                                 }
                             }
                         }
@@ -269,6 +275,7 @@ fun EditRulesForm(vm: LobbyViewModel) {
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
+    val countdown by vm.countdown.observeAsState()
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Input(
@@ -288,6 +295,12 @@ fun EditRulesForm(vm: LobbyViewModel) {
             value = radius?.toString() ?: "",
             keyboardType = KeyboardType.Number,
             onChangeValue = { vm.updateRadius(it.toIntOrNull()) })
+
+        Input(
+            title = stringResource(id = R.string.countdown),
+            value = countdown?.toString() ?: "",
+            keyboardType = KeyboardType.Number,
+            onChangeValue = { vm.updateCountdown(it.toIntOrNull()) })
     }
 }
 
@@ -358,7 +371,7 @@ fun Participants(
             PlayerCard(
                 player = player,
                 isCreator = isCreator,
-                vm,
+                vm = vm,
                 gameId = gameId,
                 setKickableIndex = { kickableIndex = index },
                 isKickable = kickableIndex == index
@@ -463,6 +476,7 @@ class LobbyViewModel() : ViewModel() {
     val maxPlayers = MutableLiveData<Int>()
     val timeLimit = MutableLiveData<Int>()
     val radius = MutableLiveData<Int>()
+    val countdown = MutableLiveData<Int>()
 
     fun updateMaxPlayers(newVal: Int?) {
         maxPlayers.value = newVal
@@ -478,6 +492,10 @@ class LobbyViewModel() : ViewModel() {
 
     fun updateQRImageVisibility(value: Boolean) {
         showQR.postValue(value)
+    }
+
+    fun updateCountdown(newVal: Int?) {
+        countdown.value = newVal
     }
 
     fun removePlayer(gameId: String, playerId: String) =
