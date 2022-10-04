@@ -80,7 +80,7 @@ object FirestoreHelper {
     fun getUser(playerId: String): DocumentReference {
         return usersRef.document(playerId)
     }
-    
+
     fun addUser(map: HashMap<String, String>, uid: String) {
         usersRef.document(uid)
             .set(map)
@@ -97,6 +97,10 @@ object FirestoreHelper {
             }
     }
 
+    fun getPlayerStatus(gameId: String, playerId: String): DocumentReference {
+        return lobbiesRef.document(gameId).collection("players").document(playerId)
+    }
+
 }
 
 class Lobby(
@@ -110,21 +114,33 @@ class Lobby(
     val countdown: Int = 0
 ) : Serializable
 
-class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "",val status: Int = 0) : Serializable
+class Player(
+    val nickname: String = "",
+    val avatarId: Int = 0,
+    val playerId: String = "",
+    val inLobbyStatus: Int = 0,
+    val inGameStatus: Int = 0,
+    val location: GeoPoint = GeoPoint(0.0, 0.0)
+) : Serializable
 
-enum class PlayerStatus(val value: Int) {
+enum class InLobbyStatus(val value: Int) {
     CREATOR(0),
     JOINED(1),
-    SEEKER(2),
-    PLAYING(3),
-    ELIMINATED(4)
+}
+
+enum class InGameStatus(val value: Int) {
+    SEEKER(0),
+    PLAYER(1),
+    MOVING(2),
+    ELIMINATED(3)
 }
 
 enum class LobbyStatus(val value: Int) {
-    ACTIVE(0),
-    COUNTDOWN(1),
-    FINISHED(2),
-    DELETED(3),
+    CREATED(0),
+    ACTIVE(1),
+    COUNTDOWN(2),
+    FINISHED(3),
+    DELETED(4),
 }
 
-val playerId = "mikko"
+val playerId = "souly"

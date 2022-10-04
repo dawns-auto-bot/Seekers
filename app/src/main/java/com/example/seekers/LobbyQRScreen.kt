@@ -8,7 +8,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
@@ -31,12 +30,9 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
-import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldValue
-import com.google.type.DateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
 import java.util.*
 
 @Composable
@@ -63,24 +59,23 @@ fun LobbyQRScreen(
 
     LaunchedEffect(lobby) {
         lobby?.let {
-            if (it.status == LobbyStatus.DELETED.value) {
-                if (!isCreator) {
-                    Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
-                        .show()
+            when (it.status) {
+                LobbyStatus.DELETED.value -> {
+                    if (!isCreator) {
+                        Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
+                    navController.navigate(NavRoutes.StartGame.route)
                 }
-                vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
-                navController.navigate(NavRoutes.StartGame.route)
+                LobbyStatus.COUNTDOWN.value -> {
+                    navController.navigate(NavRoutes.Countdown.route + "/$gameId")
+                }
+                LobbyStatus.ACTIVE.value -> {
+                    navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
+                }
             }
 
-            if (it.status == LobbyStatus.COUNTDOWN.value) {
-                // val startTime = it.startTime
-                val startTime = Timestamp.now()
-                val now = Timestamp.now()
-                //val countdown = it.countdown
-                val countdown = 30
-                val timeLeft = countdown - (now.toDate().time - startTime.toDate().time)/1000
-                navController.navigate(NavRoutes.Countdown.route + "/$timeLeft")
-            }
         }
     }
 
@@ -230,7 +225,7 @@ fun Participants(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        itemsIndexed(players.sortedBy { it.status }) { index, player ->
+        itemsIndexed(players.sortedBy { it.inLobbyStatus }) { index, player ->
             PlayerCard(
                 player = player,
                 isCreator = isCreator,
@@ -299,8 +294,8 @@ fun PlayerCard(
                         .padding(10.dp)
                 )
             }
-            Text(text = "${player.nickname} ${if (player.status == PlayerStatus.CREATOR.value) "(Host)" else ""}")
-            if (isKickable && player.status == PlayerStatus.JOINED.value) {
+            Text(text = "${player.nickname} ${if (player.inLobbyStatus == InLobbyStatus.CREATOR.value) "(Host)" else ""}")
+            if (isKickable && player.inLobbyStatus == InLobbyStatus.JOINED.value) {
                 Button(
                     onClick = {
                         vm.removePlayer(gameId = gameId, player.playerId)
@@ -374,7 +369,7 @@ class LobbyViewModel() : ViewModel() {
             .addOnSuccessListener { data ->
                 val player = data.toObject(Player::class.java)
                 player?.let {
-                    isCreator.postValue(it.status == PlayerStatus.CREATOR.value)
+                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.value)
                 }
             }
             .addOnFailureListener {

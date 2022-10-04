@@ -1,7 +1,6 @@
 package com.example.seekers
 
 import android.os.CountDownTimer
-import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.CircularProgressIndicator
@@ -16,64 +15,90 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
-import com.example.seekers.ui.theme.SeekersTheme
+import com.google.firebase.Timestamp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun CountdownScreen(
-    seconds: Int,
+    gameId: String,
     navController: NavHostController,
     vm: CountdownViewModel = viewModel(),
-    isSeeker: Boolean = false
 ) {
-    val timeLeft by vm.timeLeft.observeAsState(seconds)
+    val initialValue by vm.initialValue.observeAsState()
+    val countdown by vm.countdown.observeAsState()
     val context = LocalContext.current
-
-    val countDownTimer = object : CountDownTimer(seconds * 1000L, 1000) {
-        override fun onTick(p0: Long) {
-            if (p0 == 0L) {
-                vm.updateTime(0)
-                return
-            }
-            vm.updateTime((p0 / 1000).toInt())
-        }
-
-        override fun onFinish() {
-            Toast.makeText(context, "Countdown over", Toast.LENGTH_SHORT).show()
-        }
-    }
+    var timesUp by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var countdownTimer: CountDownTimer? by remember { mutableStateOf(null) }
 
     LaunchedEffect(Unit) {
-        vm.updateTime(seconds)
-        countDownTimer.start()
+        vm.getInitialValue(gameId)
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .padding(32.dp), contentAlignment = Alignment.Center
-    ) {
-        CountdownTimerUI(timeLeft = timeLeft, seconds = seconds, isSeeker = isSeeker)
+    LaunchedEffect(initialValue) {
+        initialValue?.let {
+            vm.updateCountdown(it)
+            countdownTimer = object : CountDownTimer(it * 1000L, 1000) {
+                override fun onTick(p0: Long) {
+                    if (p0 == 0L) {
+                        vm.updateCountdown(0)
+                        return
+                    }
+                    vm.updateCountdown((p0 / 1000).toInt())
+                }
+
+                override fun onFinish() {
+                    timesUp = true
+                    scope.launch {
+                        delay(1500)
+                        vm.updateLobby(
+                            mapOf(Pair("status", LobbyStatus.ACTIVE.value)),
+                            gameId
+                        )
+                        navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
+                    }
+                }
+            }
+        }
+
     }
+
+    countdownTimer?.let {
+        LaunchedEffect(Unit) {
+            it.start()
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp), contentAlignment = Alignment.Center
+        ) {
+            CountdownTimerUI(countdown = countdown!!, initialTime = initialValue!!)
+        }
+    }
+
 }
 
 @Composable
-fun CountdownTimerUI(timeLeft: Int, seconds: Int, isSeeker: Boolean) {
-    val floatLeft = if (timeLeft == 0) 0f else (timeLeft.toFloat() / seconds)
+fun CountdownTimerUI(countdown: Int, initialTime: Int) {
+    val floatLeft = if (countdown == 0) 0f else (countdown.toFloat() / initialTime)
     val animatedProgress = animateFloatAsState(
         targetValue = floatLeft,
         animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec
     ).value
     var size by remember { mutableStateOf(IntSize.Zero) }
 
-    Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(200.dp), contentAlignment = Alignment.Center
+    ) {
         CircularProgressIndicator(
             progress = animatedProgress,
             strokeWidth = 10.dp,
@@ -87,13 +112,12 @@ fun CountdownTimerUI(timeLeft: Int, seconds: Int, isSeeker: Boolean) {
                 }
                 .offset(0.dp, -(with(LocalDensity.current) { size.width.toDp() }) / 2)
         )
-        Text(text = convertToClock(timeLeft), style = MaterialTheme.typography.h1)
+        Text(text = convertToClock(countdown), style = MaterialTheme.typography.h1)
         Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-            Text(text = if (isSeeker) "Participants are finding a hiding spot" else "Go and Hide!")
+            Text(text = "Hiding phase")
         }
     }
 }
-
 
 fun convertToClock(seconds: Int): String {
     val minutes = (seconds / 60)
@@ -104,17 +128,36 @@ fun convertToClock(seconds: Int): String {
 }
 
 class CountdownViewModel : ViewModel() {
-    val timeLeft = MutableLiveData<Int>()
+    val firestore = FirestoreHelper
+    val initialValue = MutableLiveData<Int>()
+    val countdown = MutableLiveData<Int>()
 
-    fun updateTime(seconds: Int) {
-        timeLeft.value = seconds
+    fun updateCountdown(seconds: Int) {
+        countdown.value = seconds
+    }
+
+    fun updateLobby(changeMap: Map<String, Any>, gameId: String) =
+        firestore.updateLobby(changeMap = changeMap, gameId = gameId)
+
+    fun getInitialValue(gameId: String) {
+        firestore.getLobby(gameId).get()
+            .addOnSuccessListener {
+                val lobby = it.toObject(Lobby::class.java)
+                lobby ?: return@addOnSuccessListener
+                val start = lobby.startTime.toDate().time / 1000
+                val countdownVal = lobby.countdown
+                val now = Timestamp.now().toDate().time / 1000
+                val remainingCountdown = start + countdownVal - now + 1
+                println("remaining $remainingCountdown")
+                initialValue.postValue(remainingCountdown.toInt())
+            }
     }
 }
 
-@Preview
-@Composable
-fun CountdownPrev() {
-    SeekersTheme() {
-        CountdownScreen(seconds = 10, navController = rememberNavController())
-    }
-}
+//@Preview
+//@Composable
+//fun CountdownPrev() {
+//    SeekersTheme() {
+//        CountdownScreen(seconds = 10, navController = rememberNavController())
+//    }
+//}

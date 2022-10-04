@@ -1,16 +1,9 @@
 package com.example.seekers
 
-import android.Manifest
 import android.content.ContentValues.TAG
-import android.content.Context
 
 import android.content.Intent
 import android.content.IntentSender
-import android.content.pm.PackageManager
-import android.graphics.Paint
-import android.hardware.Sensor
-import android.hardware.SensorManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -18,8 +11,6 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.seekers.ui.theme.SeekersTheme
 import androidx.compose.runtime.livedata.observeAsState
@@ -68,11 +59,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import com.example.seekers.general.CustomButton
-import com.example.seekers.ui.theme.StepCounter
 
 class MainActivity : ComponentActivity() {
 
@@ -205,12 +193,25 @@ fun MyAppNavHost() {
         }
 
         //Countdown
-        composable(NavRoutes.Countdown.route + "/{seconds}",
+        composable(
+            NavRoutes.Countdown.route + "/{gameId}",
             arguments = listOf(
-                navArgument("seconds") { type = NavType.IntType }
-            )) {
-            val seconds = it.arguments!!.getInt("seconds")
-            CountdownScreen(seconds = seconds, navController = navController)
+                navArgument("gameId") { type = NavType.StringType },
+            )
+        ) {
+            val gameId = it.arguments!!.getString("gameId")!!
+            CountdownScreen(gameId = gameId, navController = navController)
+        }
+
+        //Heatmap
+        composable(
+            NavRoutes.Heatmap.route + "/{gameId}",
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+            )
+        ) {
+            val gameId = it.arguments!!.getString("gameId")!!
+            HeatMap(mapControl = true, navController = navController, gameId = gameId)
         }
     }
 
@@ -235,14 +236,20 @@ fun MainScreen(navController: NavController) {
     val context = LocalContext.current
     val loggedInUser: FirebaseUser? by authenticationViewModel.user.observeAsState(null)
 
+    LaunchedEffect(loggedInUser) {
+        loggedInUser?.let {
+            navController.navigate(NavRoutes.StartGame.route)
+        }
+    }
 
     val launcher = googleRememberFirebaseAuthLauncher(
         onAuthComplete = {
             authenticationViewModel.setUser(it.user)
-            navController.navigate(NavRoutes.StartGame.route)
+            Log.d("authenticated", "MainScreen: ${auth.currentUser}")
         },
         onAuthError = {
             authenticationViewModel.setUser(null)
+            Log.d("authenticated", "MainScreen: ${it.message}")
         }
     )
 
@@ -304,7 +311,6 @@ fun CreateUserForm(
     auth: FirebaseAuth,
     navController: NavController
 ) {
-
     var email by remember { mutableStateOf(TextFieldValue("")) }
     var password by remember { mutableStateOf(TextFieldValue("")) }
     val focusManager = LocalFocusManager.current
@@ -343,7 +349,6 @@ fun CreateUserForm(
                     onDone = { focusManager.clearFocus() }),
                 label = { Text(text = "Password") },
                 placeholder = { Text(text = "Password") },
-                //modifier = Modifier.weight(0.5F)
             )
             Spacer(modifier = Modifier.height(20.dp))
             Row(
@@ -367,7 +372,7 @@ fun CreateUserForm(
                             )
                                 .addOnCompleteListener() {
                                     model.setUser(auth.currentUser)
-                                    navController.navigate(NavRoutes.StartGame.route)
+                                    println(it.result.user)
                                 }
                         }
                     }, text = "Create an account"

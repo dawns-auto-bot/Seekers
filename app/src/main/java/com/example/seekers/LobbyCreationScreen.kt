@@ -54,15 +54,22 @@ fun LobbyCreationScreen(
             if (maxPlayers != null && timeLimit != null && radius != null) {
                 val geoPoint = GeoPoint(center!!.latitude, center!!.longitude)
                 val lobby = Lobby(
-                    "",
-                    geoPoint,
-                    maxPlayers!!,
-                    timeLimit!!,
-                    radius!!,
-                    LobbyStatus.ACTIVE.value
+                    id = "",
+                    center = geoPoint,
+                    maxPlayers = maxPlayers!!,
+                    timeLimit = timeLimit!!,
+                    radius = radius!!,
+                    status = LobbyStatus.CREATED.value,
+                    countdown = 10
                 )
                 val gameId = vm.addLobby(lobby)
-                val player = Player(nickname, avatarId, playerId, PlayerStatus.CREATOR.value)
+                val player = Player(
+                    nickname = nickname,
+                    avatarId = avatarId,
+                    playerId = playerId,
+                    inLobbyStatus = InLobbyStatus.CREATOR.value,
+                    inGameStatus = InGameStatus.SEEKER.value
+                )
                 vm.addPlayer(player, gameId)
                 vm.updateUser(
                     playerId,

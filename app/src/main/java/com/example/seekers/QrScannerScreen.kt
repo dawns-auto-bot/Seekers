@@ -33,11 +33,11 @@ fun QrScannerScreen(navController: NavHostController, nickname: String, avatarId
     ) { isGranted: Boolean ->
         if (isGranted) {
             cameraIsAllowed = true
-            Log.d("qrScreen","PERMISSION GRANTED")
+            Log.d("qrScreen", "PERMISSION GRANTED")
 
         } else {
             cameraIsAllowed = false
-            Log.d("qrScreen","PERMISSION DENIED")
+            Log.d("qrScreen", "PERMISSION DENIED")
         }
     }
 
@@ -52,7 +52,13 @@ fun QrScannerScreen(navController: NavHostController, nickname: String, avatarId
     LaunchedEffect(gameId) {
         gameId?.let {
             val firestore = FirestoreHelper
-            val player = Player(nickname, avatarId, playerId, PlayerStatus.JOINED.value)
+            val player = Player(
+                nickname = nickname,
+                avatarId = avatarId,
+                playerId = playerId,
+                inLobbyStatus = InLobbyStatus.JOINED.value,
+                inGameStatus = InGameStatus.PLAYER.value
+            )
             firestore.addPlayer(player, it)
             firestore.updateUser(
                 playerId,
@@ -61,7 +67,7 @@ fun QrScannerScreen(navController: NavHostController, nickname: String, avatarId
             navController.navigate(NavRoutes.LobbyQR.route + "/$it")
         }
     }
-    
+
     if (cameraIsAllowed) {
         val scannerView = CodeScannerView(context)
         val codeScanner = CodeScanner(context, scannerView)
