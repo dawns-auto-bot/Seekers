@@ -2,10 +2,15 @@ package com.example.seekers
 
 import android.Manifest
 import android.content.ContentValues.TAG
+import android.content.Context
+
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.graphics.Paint
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -67,6 +72,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import com.example.seekers.general.CustomButton
+import com.example.seekers.ui.theme.StepCounter
 
 class MainActivity : ComponentActivity() {
 
@@ -77,6 +83,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
 
         //Google
         oneTapClient = Identity.getSignInClient(this)
@@ -206,6 +213,8 @@ fun MyAppNavHost() {
             CountdownScreen(seconds = seconds, navController = navController)
         }
     }
+
+
 }
 
 @Composable
@@ -221,9 +230,11 @@ fun LoginBtn(navController: NavController) {
 fun MainScreen(navController: NavController) {
     val auth = Firebase.auth
     val authenticationViewModel = AuthenticationViewModel(auth)
+    authenticationViewModel.initializeUser()
     val token = stringResource(R.string.default_web_client_id)
     val context = LocalContext.current
     val loggedInUser: FirebaseUser? by authenticationViewModel.user.observeAsState(null)
+
 
     val launcher = googleRememberFirebaseAuthLauncher(
         onAuthComplete = {
@@ -235,12 +246,18 @@ fun MainScreen(navController: NavController) {
         }
     )
 
-    Column (horizontalAlignment = Alignment.CenterHorizontally,
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxHeight()
     ) {
+
         if (loggedInUser == null) {
-            CreateUserForm(model = authenticationViewModel, auth = auth, navController = navController)
+            CreateUserForm(
+                model = authenticationViewModel,
+                auth = auth,
+                navController = navController
+            )
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = {
@@ -263,16 +280,19 @@ fun MainScreen(navController: NavController) {
                 )
             }
 
-        } else{
-            Button(onClick = {
-                authenticationViewModel.logOut()
-            }) {
-                Text("Sign out")
-            }
-            Button(onClick = {
-                navController.navigate(NavRoutes.StartGame.route)
-            }) {
-                Text("Start game")
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CustomButton(onClick = {
+                    navController.navigate(NavRoutes.StartGame.route)
+                }, text = "Start game")
+                Spacer(modifier = Modifier.height(50.dp))
+                CustomButton(onClick = {
+                    authenticationViewModel.logOut()
+                }, text = "Sign out")
             }
         }
     }
@@ -283,7 +303,7 @@ fun CreateUserForm(
     model: AuthenticationViewModel = viewModel(),
     auth: FirebaseAuth,
     navController: NavController
-){
+) {
 
     var email by remember { mutableStateOf(TextFieldValue("")) }
     var password by remember { mutableStateOf(TextFieldValue("")) }
@@ -326,35 +346,39 @@ fun CreateUserForm(
                 //modifier = Modifier.weight(0.5F)
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.Center, modifier=Modifier.fillMaxWidth()){
-                CustomButton(onClick = {
-                if (email.text == "" || password.text == "") {
-                    scope.launch {
-                        snackBarHostState.showSnackbar(
-                            "Please give an email and a password",
-                            "!",
-                            SnackbarDuration.Short,
-                        )
-                    }
-                } else {
-                    auth.createUserWithEmailAndPassword(
-                        email.text,
-                        password.text
-                    )
-                        .addOnCompleteListener() {
-                            model.setUser(auth.currentUser)
-                            navController.navigate(NavRoutes.StartGame.route)
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                CustomButton(
+                    onClick = {
+                        if (email.text == "" || password.text == "") {
+                            scope.launch {
+                                snackBarHostState.showSnackbar(
+                                    "Please give an email and a password",
+                                    "!",
+                                    SnackbarDuration.Short,
+                                )
+                            }
+                        } else {
+                            auth.createUserWithEmailAndPassword(
+                                email.text,
+                                password.text
+                            )
+                                .addOnCompleteListener() {
+                                    model.setUser(auth.currentUser)
+                                    navController.navigate(NavRoutes.StartGame.route)
+                                }
                         }
-                }
+                    }, text = "Create an account"
+                )
             }
-                    , text = "Create an account"
-            )
-        }}
+        }
     }
 }
 
 @Composable
-fun GoogleButton(){
+fun GoogleButton() {
 
 }
 
