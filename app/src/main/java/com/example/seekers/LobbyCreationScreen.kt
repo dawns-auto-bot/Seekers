@@ -2,13 +2,15 @@ package com.example.seekers
 
 import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
-
+import com.example.seekers.general.IconButton
 import android.app.Application
+import android.util.Log
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +36,11 @@ fun LobbyCreationScreen(
     val radius by vm.radius.observeAsState()
     val center by mapvm.playAreaCenter.observeAsState()
 
+    var selected1 by remember { mutableStateOf(false) }
+    var selected2 by remember { mutableStateOf(false) }
+    val color1 = if (selected1) Color(0xFF838383) else Color.LightGray
+    val color2 = if (selected2) Color(0xFF929292) else Color.LightGray
+
     Column(
         Modifier
             .fillMaxSize()
@@ -45,8 +52,53 @@ fun LobbyCreationScreen(
             text = stringResource(id = R.string.lobby_creation),
             style = MaterialTheme.typography.h6
         )
-        Map(vm = mapvm, lobbyvm = vm, true)
-        CreationForm(vm = vm)
+        Spacer(Modifier.height(15.dp))
+        Row(horizontalArrangement = Arrangement.SpaceEvenly) {
+            Column(Modifier.weight(1f)) {
+                IconButton(
+                    resourceId = R.drawable.map,
+                    buttonText = "Define Area",
+                    buttonColor = color1,
+                ) {
+                    if(selected1) {
+                        selected1 = !selected1
+                        selected2 = false
+                    } else if (selected2) {
+                        selected1 = !selected1
+                        selected2 = false
+                    } else
+                        selected1 = !selected1
+                }
+            }
+            Spacer(Modifier.width(5.dp))
+            Column(Modifier.weight(1f)) {
+                IconButton(
+                    resourceId = R.drawable.switches,
+                    buttonText = "Set Rules",
+                    buttonColor = color2,
+                ) {
+                    if(selected2) {
+                        selected2 = !selected2
+                        selected1 = false
+                    } else if (selected1) {
+                        selected2 = !selected2
+                        selected1 = false
+                    } else
+                        selected2 = !selected2
+                }
+            }
+
+        }
+
+        if(selected1) {
+            Spacer(Modifier.height(15.dp))
+            Map(vm = mapvm, lobbyvm = vm, true)
+        }
+
+        if(selected2) {
+            CreationForm(vm = vm)
+        }
+
         CustomButton(
             modifier = Modifier.fillMaxWidth(),
             text = stringResource(id = R.string.create_lobby)
