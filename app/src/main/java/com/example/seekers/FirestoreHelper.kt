@@ -1,11 +1,9 @@
 package com.example.seekers
 
-import android.content.Context
-import android.os.Parcelable
 import android.util.Log
-import com.google.android.gms.tasks.Task
-import com.google.firebase.FirebaseApp
-import com.google.firebase.firestore.*
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.io.Serializable
@@ -94,18 +92,37 @@ object FirestoreHelper {
             }
     }
 
+    fun updateInGamePlayerDistanceStatus(changeMap: Map<String, Any>,player: Player, gameId: String) {
+        val playerRef = lobbiesRef.document(gameId).collection("players").document(player.playerId)
+        playerRef.update(changeMap)
+            .addOnSuccessListener {
+                Log.d(TAG, "updateInGameDistanceStatus: ${player.playerId} distance updated")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "update: ", it)
+            }
+    }
+
 }
 
 class Lobby(
     var id: String = "",
     val center: GeoPoint = GeoPoint(0.0, 0.0),
+    val countdown: Int = 0,
     val maxPlayers: Int = 0,
     val timeLimit: Int = 0,
     val radius: Int = 0,
     val status: Int = 0
 ) : Serializable
 
-class Player(val nickname: String = "", val avatarId: Int = 0, val playerId: String = "",val status: Int = 0) : Serializable
+class Player(
+    val nickname: String = "",
+    val avatarId: Int = 0,
+    val playerId: String = "",
+    val status: Int = 0,
+    val location: GeoPoint = GeoPoint(0.0,0.0),
+    val distanceStatus: Int = 0
+) : Serializable
 
 enum class PlayerStatus(val value: Int) {
     CREATOR(0),
@@ -115,10 +132,17 @@ enum class PlayerStatus(val value: Int) {
     ELIMINATED(4)
 }
 
+enum class PlayerDistance(val value: Int) {
+    NOT_IN_RADAR(0),
+    WITHIN10(1),
+    WITHIN50(2),
+    WITHIN100(3)
+}
+
 enum class LobbyStatus(val value: Int) {
     ACTIVE(0),
     FINISHED(1),
     DELETED(2),
 }
 
-val playerId = "bob"
+val playerId = "dom"

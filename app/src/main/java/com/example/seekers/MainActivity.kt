@@ -181,6 +181,16 @@ fun MyAppNavHost() {
             val gameId = it.arguments!!.getString("gameId")!!
             LobbyQRScreen(navController = navController, gameId = gameId)
         }
+        //Radar
+        composable(
+            NavRoutes.Radar.route + "/{gameId}",
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+            )
+        ) {
+            val gameId = it.arguments!!.getString("gameId")!!
+            RadarScreen(navController = navController, gameId = gameId)
+        }
         //QR Scanner
         composable(NavRoutes.Scanner.route + "/{nickname}/{avatarId}",
             arguments = listOf(

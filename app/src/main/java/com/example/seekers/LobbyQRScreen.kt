@@ -8,10 +8,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -21,9 +24,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.LiveData
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,8 +51,10 @@ fun LobbyQRScreen(
     val players by vm.players.observeAsState(listOf())
     val lobby by vm.lobby.observeAsState()
     val isCreator by vm.isCreator.observeAsState(false)
+    val showQR by vm.showQR.observeAsState(false)
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
+    var showEditRulesDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -85,7 +93,23 @@ fun LobbyQRScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = {
-                Text(text = "Scan to join!", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
+                Text(
+                    text = "Scan QR to join!",
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(15.dp)
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = {
+                    if (showQR) {
+                        vm.updateQRImageVisibility(false)
+                    } else {
+                        vm.updateQRImageVisibility(true)
+                    }
+                }) {
+                    Icon(Icons.Outlined.QrCode2, "QR", modifier = Modifier.size(40.dp))
+                }
             },
             actions = {
                 Button(onClick = {
@@ -108,18 +132,37 @@ fun LobbyQRScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
+            if (showQR) {
+                QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
+            }
+
             Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
             Participants(
                 Modifier
                     .weight(3f)
-                    .padding(horizontal = 15.dp), players, isCreator, vm, gameId)
+                    .padding(horizontal = 15.dp), players, isCreator, vm, gameId
+            )
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                CustomButton(text = "Start Game") {
-                    Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT).show()
+                Column() {
+                    CustomButton(text = "${if (isCreator) "Edit" else "Check"} Rules") {
+                        showEditRulesDialog = true
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CustomButton(text = "Start Game") {
+                        navController.navigate(NavRoutes.Radar.route + "/$gameId")
+                        Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT)
+                            .show()
+                    }
                 }
             }
 
+        }
+        if (showEditRulesDialog) {
+            EditRulesDialog(
+                vm,
+                gameId,
+                isCreator,
+                onDismissRequest = { showEditRulesDialog = false })
         }
         if (showLeaveDialog) {
             LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
@@ -145,6 +188,120 @@ fun LobbyQRScreen(
         }
     }
 
+}
+
+@Composable
+fun EditRulesDialog(
+    vm: LobbyViewModel,
+    gameId: String,
+    isCreator: Boolean,
+    onDismissRequest: () -> Unit
+) {
+    val context = LocalContext.current
+    val maxPlayers by vm.maxPlayers.observeAsState()
+    val timeLimit by vm.timeLimit.observeAsState()
+    val radius by vm.radius.observeAsState()
+    val countdown by vm.countdown.observeAsState()
+
+    Dialog(onDismissRequest) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White
+        ) {
+            Box(
+                contentAlignment = Alignment.Center
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "${if (isCreator) "Edit" else "Check"} Rules")
+                        Icon(
+                            imageVector = Icons.Filled.Cancel,
+                            contentDescription = "close dialog",
+                            modifier = Modifier
+                                .width(30.dp)
+                                .height(30.dp)
+                                .clickable { onDismissRequest() }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    if (isCreator) {
+                        EditRulesForm(vm = vm)
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
+                            CustomButton(text = "Save") {
+                                if (maxPlayers != null && timeLimit != null && radius != null && countdown != null) {
+                                    val changeMap = mapOf(
+                                        Pair("maxPlayers", maxPlayers!!),
+                                        Pair("timeLimit", timeLimit!!),
+                                        Pair("radius", radius!!),
+                                        Pair("countdown", countdown!!)
+                                    )
+                                    vm.updateLobby(changeMap, gameId = gameId)
+                                    Toast.makeText(context, "Game rules updated", Toast.LENGTH_LONG)
+                                        .show()
+                                    onDismissRequest()
+                                } else {
+                                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT)
+                                        .show()
+                                }
+                            }
+                        }
+                    } else {
+                        ShowRules(vm = vm)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ShowRules(vm: LobbyViewModel) {
+    val lobby by vm.lobby.observeAsState()
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(text = "Maximum amount of players: ${lobby?.maxPlayers}")
+        Text(text = "Time limit: ${lobby?.timeLimit}")
+        Text(text = "Play area radius: ${lobby?.radius}")
+    }
+}
+
+@Composable
+fun EditRulesForm(vm: LobbyViewModel) {
+    val maxPlayers by vm.maxPlayers.observeAsState()
+    val timeLimit by vm.timeLimit.observeAsState()
+    val radius by vm.radius.observeAsState()
+    val countdown by vm.countdown.observeAsState()
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Input(
+            title = stringResource(id = R.string.max_players),
+            value = maxPlayers?.toString() ?: "",
+            keyboardType = KeyboardType.Number,
+            onChangeValue = { vm.updateMaxPlayers(it.toIntOrNull()) })
+
+        Input(
+            title = stringResource(id = R.string.time_limit),
+            value = timeLimit?.toString() ?: "",
+            keyboardType = KeyboardType.Number,
+            onChangeValue = { vm.updateTimeLimit(it.toIntOrNull()) })
+
+        Input(
+            title = stringResource(id = R.string.radius),
+            value = radius?.toString() ?: "",
+            keyboardType = KeyboardType.Number,
+            onChangeValue = { vm.updateRadius(it.toIntOrNull()) })
+
+        Input(
+            title = stringResource(id = R.string.countdown),
+            value = countdown?.toString() ?: "",
+            keyboardType = KeyboardType.Number,
+            onChangeValue = { vm.updateCountdown(it.toIntOrNull()) })
+    }
 }
 
 @Composable
@@ -214,7 +371,7 @@ fun Participants(
             PlayerCard(
                 player = player,
                 isCreator = isCreator,
-                vm,
+                vm = vm,
                 gameId = gameId,
                 setKickableIndex = { kickableIndex = index },
                 isKickable = kickableIndex == index
@@ -233,7 +390,6 @@ fun PlayerCard(
     setKickableIndex: () -> Unit,
     isKickable: Boolean
 ) {
-
     val avaratID = when (player.avatarId) {
         0 -> R.drawable.bee
         1 -> R.drawable.chameleon
@@ -249,6 +405,8 @@ fun PlayerCard(
         else -> R.drawable.whale
     }
 
+
+
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -259,10 +417,10 @@ fun PlayerCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .clickable {
-                if (isCreator) {
-                    setKickableIndex()
+                    if (isCreator) {
+                        setKickableIndex()
+                    }
                 }
-            }
         ) {
             Card(
                 shape = CircleShape,
@@ -314,12 +472,30 @@ class LobbyViewModel() : ViewModel() {
     val players = MutableLiveData(listOf<Player>())
     val lobby = MutableLiveData<Lobby>()
     val isCreator = MutableLiveData<Boolean>()
+    val showQR = MutableLiveData<Boolean>()
+    val maxPlayers = MutableLiveData<Int>()
+    val timeLimit = MutableLiveData<Int>()
+    val radius = MutableLiveData<Int>()
+    val countdown = MutableLiveData<Int>()
 
-    private val _showRemovePlayerBtn = MutableLiveData(false)
-    val showRemovePlayerBtn: LiveData<Boolean> = _showRemovePlayerBtn
+    fun updateMaxPlayers(newVal: Int?) {
+        maxPlayers.value = newVal
+    }
 
-    fun updateRemoveBtn(value: Boolean) {
-        _showRemovePlayerBtn.value = value
+    fun updateTimeLimit(newVal: Int?) {
+        timeLimit.value = newVal
+    }
+
+    fun updateRadius(newVal: Int?) {
+        radius.value = newVal
+    }
+
+    fun updateQRImageVisibility(value: Boolean) {
+        showQR.postValue(value)
+    }
+
+    fun updateCountdown(newVal: Int?) {
+        countdown.value = newVal
     }
 
     fun removePlayer(gameId: String, playerId: String) =
