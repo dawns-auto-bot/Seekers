@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
@@ -56,8 +55,6 @@ fun HeatMap(
     navController: NavHostController
 ) {
     val context = LocalContext.current
-    val locationData: Location? by vm.locationData.observeAsState(null)
-    var mapSize by remember { mutableStateOf(IntSize.Zero) }
     val radius by vm.radius.observeAsState()
     var locationAllowed by remember { mutableStateOf(false) }
     var initialPosSet by remember { mutableStateOf(false) }
@@ -183,10 +180,12 @@ fun HeatMap(
                     properties = it,
                     uiSettings = uiSettings,
                 ) {
-                    TileOverlay(
-                        tileProvider = tileProvider,
-                        transparency = 0.3f
-                    )
+                    if (heatPositions.isNotEmpty()) {
+                        TileOverlay(
+                            tileProvider = tileProvider,
+                            transparency = 0.3f
+                        )
+                    }
                     movingPlayers.forEach {
                         val res = avatarList[it.avatarId]
                         val bitmap = BitmapFactory.decodeResource(context.resources, res)
@@ -315,27 +314,11 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     val movingPlayers = Transformations.map(playersWithoutSelf) { players ->
         players.filter { it.inGameStatus == InGameStatus.MOVING.value }
     }
-
     val statuses = Transformations.map(players) { players ->
         players.map { it.inGameStatus }
     }
     val countdown = MutableLiveData<Int>()
     val locationData: MutableLiveData<Location> = MutableLiveData<Location>(null)
-    val playAreaCenter: MutableLiveData<LatLng> =
-        MutableLiveData<LatLng>(LatLng(60.224315, 24.757500))
-//    val positions = MutableLiveData(
-//        listOf(
-//            LatLng(60.223751, 24.759106),
-//            LatLng(60.223549, 24.758087),
-//            LatLng(60.223091, 24.759321),
-//            LatLng(60.223191, 24.759021),
-//            LatLng(60.223291, 24.759521),
-//            LatLng(60.223391, 24.759621),
-//            LatLng(60.223491, 24.759421),
-//            LatLng(60.223991, 24.759121),
-//            LatLng(60.223691, 24.759821),
-//        )
-//    )
 
     fun getPlayers(gameId: String) {
         firestore.getPlayers(gameId = gameId)
