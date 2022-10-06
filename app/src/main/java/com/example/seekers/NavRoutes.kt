@@ -8,4 +8,6 @@ sealed class NavRoutes(val route: String) {
     object LobbyQR: NavRoutes("LobbyQR")
     object Scanner: NavRoutes("Scanner")
     object Radar: NavRoutes("Radar")
+    object Countdown: NavRoutes("Countdown")
+    object Heatmap: NavRoutes("Heatmap")
 }

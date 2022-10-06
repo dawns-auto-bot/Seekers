@@ -37,6 +37,7 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -67,13 +68,21 @@ fun LobbyQRScreen(
 
     LaunchedEffect(lobby) {
         lobby?.let {
-            if (it.status == LobbyStatus.DELETED.value) {
-                if (!isCreator) {
-                    Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
-                        .show()
+            when (it.status) {
+                LobbyStatus.DELETED.value -> {
+                    if (!isCreator) {
+                        Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
+                    navController.navigate(NavRoutes.StartGame.route)
                 }
-                vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
-                navController.navigate(NavRoutes.StartGame.route)
+                LobbyStatus.COUNTDOWN.value -> {
+                    navController.navigate(NavRoutes.Countdown.route + "/$gameId")
+                }
+                LobbyStatus.ACTIVE.value -> {
+                    navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
+                }
             }
         }
     }
@@ -149,9 +158,13 @@ fun LobbyQRScreen(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     CustomButton(text = "Start Game") {
-                        navController.navigate(NavRoutes.Radar.route + "/$gameId")
-                        Toast.makeText(context, "You have started the game", Toast.LENGTH_SHORT)
-                            .show()
+                        vm.updateLobby(
+                            mapOf(
+                                Pair("status", LobbyStatus.COUNTDOWN.value),
+                                Pair("startTime", FieldValue.serverTimestamp())
+                            ),
+                            gameId
+                        )
                     }
                 }
             }
@@ -367,7 +380,7 @@ fun Participants(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        itemsIndexed(players.sortedBy { it.status }) { index, player ->
+        itemsIndexed(players.sortedBy { it.inLobbyStatus }) { index, player ->
             PlayerCard(
                 player = player,
                 isCreator = isCreator,
@@ -390,6 +403,7 @@ fun PlayerCard(
     setKickableIndex: () -> Unit,
     isKickable: Boolean
 ) {
+
     val avaratID = when (player.avatarId) {
         0 -> R.drawable.bee
         1 -> R.drawable.chameleon
@@ -404,8 +418,6 @@ fun PlayerCard(
         10 -> R.drawable.penguin
         else -> R.drawable.whale
     }
-
-
 
     Card(
         modifier = Modifier
@@ -437,8 +449,8 @@ fun PlayerCard(
                         .padding(10.dp)
                 )
             }
-            Text(text = "${player.nickname} ${if (player.status == PlayerStatus.CREATOR.value) "(Host)" else ""}")
-            if (isKickable && player.status == PlayerStatus.JOINED.value) {
+            Text(text = "${player.nickname} ${if (player.inLobbyStatus == InLobbyStatus.CREATOR.value) "(Host)" else ""}")
+            if (isKickable && player.inLobbyStatus == InLobbyStatus.JOINED.value) {
                 Button(
                     onClick = {
                         vm.removePlayer(gameId = gameId, player.playerId)
@@ -472,6 +484,7 @@ class LobbyViewModel() : ViewModel() {
     val players = MutableLiveData(listOf<Player>())
     val lobby = MutableLiveData<Lobby>()
     val isCreator = MutableLiveData<Boolean>()
+    val playerId = firestore.uid
     val showQR = MutableLiveData<Boolean>()
     val maxPlayers = MutableLiveData<Int>()
     val timeLimit = MutableLiveData<Int>()
@@ -529,7 +542,7 @@ class LobbyViewModel() : ViewModel() {
             .addOnSuccessListener { data ->
                 val player = data.toObject(Player::class.java)
                 player?.let {
-                    isCreator.postValue(it.status == PlayerStatus.CREATOR.value)
+                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.value)
                 }
             }
             .addOnFailureListener {

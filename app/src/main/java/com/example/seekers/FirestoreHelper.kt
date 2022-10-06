@@ -1,6 +1,11 @@
 package com.example.seekers
 
 import android.util.Log
+import com.google.android.gms.tasks.Task
+import com.google.firebase.FirebaseApp
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.*
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.GeoPoint
@@ -12,6 +17,7 @@ object FirestoreHelper {
     val lobbiesRef = Firebase.firestore.collection("lobbies")
     val usersRef = Firebase.firestore.collection("users")
     val TAG = "firestoreHelper"
+    val uid get() = Firebase.auth.uid
 
     fun addLobby(lobby: Lobby): String {
         val ref = lobbiesRef.document()
@@ -92,6 +98,10 @@ object FirestoreHelper {
             }
     }
 
+    fun getPlayerStatus(gameId: String, playerId: String): DocumentReference {
+        return lobbiesRef.document(gameId).collection("players").document(playerId)
+    }
+
     fun updateInGamePlayerDistanceStatus(changeMap: Map<String, Any>,player: Player, gameId: String) {
         val playerRef = lobbiesRef.document(gameId).collection("players").document(player.playerId)
         playerRef.update(changeMap)
@@ -119,28 +129,34 @@ object FirestoreHelper {
 class Lobby(
     var id: String = "",
     val center: GeoPoint = GeoPoint(0.0, 0.0),
-    val countdown: Int = 0,
     val maxPlayers: Int = 0,
     val timeLimit: Int = 0,
     val radius: Int = 0,
-    val status: Int = 0
+    val status: Int = 0,
+    val startTime: Timestamp = Timestamp.now(),
+    val countdown: Int = 0
 ) : Serializable
 
 class Player(
     val nickname: String = "",
     val avatarId: Int = 0,
     val playerId: String = "",
-    val status: Int = 0,
-    val location: GeoPoint = GeoPoint(0.0,0.0),
-    val distanceStatus: Int = 0
+    val inLobbyStatus: Int = 0,
+    val inGameStatus: Int = 0,
+    val distanceStatus: Int = 0,
+    val location: GeoPoint = GeoPoint(0.0, 0.0)
 ) : Serializable
 
-enum class PlayerStatus(val value: Int) {
+enum class InLobbyStatus(val value: Int) {
     CREATOR(0),
     JOINED(1),
-    SEEKER(2),
-    PLAYING(3),
-    ELIMINATED(4)
+}
+
+enum class InGameStatus(val value: Int) {
+    SEEKER(0),
+    PLAYER(1),
+    MOVING(2),
+    ELIMINATED(3)
 }
 
 enum class PlayerDistance(val value: Int) {
@@ -151,9 +167,11 @@ enum class PlayerDistance(val value: Int) {
 }
 
 enum class LobbyStatus(val value: Int) {
-    ACTIVE(0),
-    FINISHED(1),
-    DELETED(2),
+    CREATED(0),
+    ACTIVE(1),
+    COUNTDOWN(2),
+    FINISHED(3),
+    DELETED(4),
 }
 
-val playerId = "testPlayer"
+val playerId = "bob"

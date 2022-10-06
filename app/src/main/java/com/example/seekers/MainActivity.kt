@@ -1,11 +1,9 @@
 package com.example.seekers
 
-import android.Manifest
 import android.content.ContentValues.TAG
+
 import android.content.Intent
 import android.content.IntentSender
-import android.content.pm.PackageManager
-import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -13,8 +11,6 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.seekers.ui.theme.SeekersTheme
 import androidx.compose.runtime.livedata.observeAsState
@@ -63,8 +59,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.sp
 import com.example.seekers.general.CustomButton
 
@@ -77,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
 
         //Google
         oneTapClient = Identity.getSignInClient(this)
@@ -206,7 +201,31 @@ fun MyAppNavHost() {
             val avatarId = it.arguments!!.getInt("avatarId")
             QrScannerScreen(navController, nickname = nickname, avatarId = avatarId)
         }
+
+        //Countdown
+        composable(
+            NavRoutes.Countdown.route + "/{gameId}",
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+            )
+        ) {
+            val gameId = it.arguments!!.getString("gameId")!!
+            CountdownScreen(gameId = gameId, navController = navController)
+        }
+
+        //Heatmap
+        composable(
+            NavRoutes.Heatmap.route + "/{gameId}",
+            arguments = listOf(
+                navArgument("gameId") { type = NavType.StringType },
+            )
+        ) {
+            val gameId = it.arguments!!.getString("gameId")!!
+            HeatMap(mapControl = true, navController = navController, gameId = gameId)
+        }
     }
+
+
 }
 
 @Composable
@@ -222,26 +241,40 @@ fun LoginBtn(navController: NavController) {
 fun MainScreen(navController: NavController) {
     val auth = Firebase.auth
     val authenticationViewModel = AuthenticationViewModel(auth)
+    authenticationViewModel.initializeUser()
     val token = stringResource(R.string.default_web_client_id)
     val context = LocalContext.current
     val loggedInUser: FirebaseUser? by authenticationViewModel.user.observeAsState(null)
 
+    LaunchedEffect(loggedInUser) {
+        loggedInUser?.let {
+            navController.navigate(NavRoutes.StartGame.route)
+        }
+    }
+
     val launcher = googleRememberFirebaseAuthLauncher(
         onAuthComplete = {
             authenticationViewModel.setUser(it.user)
-            navController.navigate(NavRoutes.StartGame.route)
+            Log.d("authenticated", "MainScreen: ${auth.currentUser}")
         },
         onAuthError = {
             authenticationViewModel.setUser(null)
+            Log.d("authenticated", "MainScreen: ${it.message}")
         }
     )
 
-    Column (horizontalAlignment = Alignment.CenterHorizontally,
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxHeight()
     ) {
+
         if (loggedInUser == null) {
-            CreateUserForm(model = authenticationViewModel, auth = auth, navController = navController)
+            CreateUserForm(
+                model = authenticationViewModel,
+                auth = auth,
+                navController = navController
+            )
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = {
@@ -264,16 +297,19 @@ fun MainScreen(navController: NavController) {
                 )
             }
 
-        } else{
-            Button(onClick = {
-                authenticationViewModel.logOut()
-            }) {
-                Text("Sign out")
-            }
-            Button(onClick = {
-                navController.navigate(NavRoutes.StartGame.route)
-            }) {
-                Text("Start game")
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                CustomButton(onClick = {
+                    navController.navigate(NavRoutes.StartGame.route)
+                }, text = "Start game")
+                Spacer(modifier = Modifier.height(50.dp))
+                CustomButton(onClick = {
+                    authenticationViewModel.logOut()
+                }, text = "Sign out")
             }
         }
     }
@@ -284,8 +320,7 @@ fun CreateUserForm(
     model: AuthenticationViewModel = viewModel(),
     auth: FirebaseAuth,
     navController: NavController
-){
-
+) {
     var email by remember { mutableStateOf(TextFieldValue("")) }
     var password by remember { mutableStateOf(TextFieldValue("")) }
     val focusManager = LocalFocusManager.current
@@ -324,38 +359,41 @@ fun CreateUserForm(
                     onDone = { focusManager.clearFocus() }),
                 label = { Text(text = "Password") },
                 placeholder = { Text(text = "Password") },
-                //modifier = Modifier.weight(0.5F)
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.Center, modifier=Modifier.fillMaxWidth()){
-                CustomButton(onClick = {
-                if (email.text == "" || password.text == "") {
-                    scope.launch {
-                        snackBarHostState.showSnackbar(
-                            "Please give an email and a password",
-                            "!",
-                            SnackbarDuration.Short,
-                        )
-                    }
-                } else {
-                    auth.createUserWithEmailAndPassword(
-                        email.text,
-                        password.text
-                    )
-                        .addOnCompleteListener() {
-                            model.setUser(auth.currentUser)
-                            navController.navigate(NavRoutes.StartGame.route)
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                CustomButton(
+                    onClick = {
+                        if (email.text == "" || password.text == "") {
+                            scope.launch {
+                                snackBarHostState.showSnackbar(
+                                    "Please give an email and a password",
+                                    "!",
+                                    SnackbarDuration.Short,
+                                )
+                            }
+                        } else {
+                            auth.createUserWithEmailAndPassword(
+                                email.text,
+                                password.text
+                            )
+                                .addOnCompleteListener() {
+                                    model.setUser(auth.currentUser)
+                                    println(it.result.user)
+                                }
                         }
-                }
+                    }, text = "Create an account"
+                )
             }
-                    , text = "Create an account"
-            )
-        }}
+        }
     }
 }
 
 @Composable
-fun GoogleButton(){
+fun GoogleButton() {
 
 }
 
