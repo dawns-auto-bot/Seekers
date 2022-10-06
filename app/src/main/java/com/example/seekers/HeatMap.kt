@@ -41,6 +41,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.GeoPoint
 import com.google.maps.android.compose.*
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.ktx.utils.withSphericalOffset
@@ -112,7 +113,7 @@ fun HeatMap(
 
     LaunchedEffect(locationAllowed) {
         if (locationAllowed) {
-            vm.startLocationUpdates()
+            vm.startLocationUpdatesForPlayer(playerId, gameId)
         }
     }
 
@@ -234,6 +235,14 @@ fun HeatMap(
                     }) {
                         Text(text = "Leave")
                     }
+                }
+                Button(
+                    onClick = {
+                    navController.navigate(NavRoutes.Radar.route + "/$gameId")
+                },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    Text(text = "Radar")
                 }
             } else {
                 Text(text = "Location permission needed")
@@ -367,29 +376,55 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 
     private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
 
-    private val locationCallback = object : LocationCallback() {
-        override fun onLocationResult(locationResult: LocationResult) {
-            for (location in locationResult.locations) {
-                locationData.postValue(location)
-            }
-        }
-    }
-
     @SuppressLint("MissingPermission")
-    fun startLocationUpdates() {
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location: Location? ->
-                location?.also {
-                    locationData.postValue(location)
+    fun startLocationUpdatesForPlayer(playerId: String, gameId: String) {
+        val locationCallback2 = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                for (location in locationResult.locations) {
+                    val changeMap = mapOf(
+                        Pair("location", GeoPoint(location.latitude, location.longitude))
+                    )
+                    firestore.updatePlayerLocation(changeMap, playerId, gameId)
                 }
             }
+        }
 
         fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback,
+            MapViewModel.locationRequest,
+            locationCallback2,
             Looper.getMainLooper()
         )
+
+        Log.d("DEBUG", "started location updates 2")
     }
+
+//    private val locationCallback = object : LocationCallback() {
+//        override fun onLocationResult(locationResult: LocationResult) {
+//            for (location in locationResult.locations) {
+//                val changeMap = mapOf(
+//                    Pair("location", GeoPoint(location.latitude, location.longitude))
+//                )
+//                firestore.updatePlayerLocation(changeMap, playerId, gameId)
+//                locationData.postValue(location)
+//            }
+//        }
+//    }
+
+//    @SuppressLint("MissingPermission")
+//    fun startLocationUpdates() {
+//        fusedLocationClient.lastLocation
+//            .addOnSuccessListener { location: Location? ->
+//                location?.also {
+//                    locationData.postValue(location)
+//                }
+//            }
+//
+//        fusedLocationClient.requestLocationUpdates(
+//            locationRequest,
+//            locationCallback,
+//            Looper.getMainLooper()
+//        )
+//    }
 }
 
 //source: https://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds
