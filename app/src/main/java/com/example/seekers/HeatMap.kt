@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -203,7 +204,8 @@ fun HeatMap(
                             ),
                             icon = BitmapDescriptorFactory.fromBitmap(resizedBitmap),
                             title = it.nickname,
-                            visible = true
+                            visible = true,
+                            anchor = Offset(0.5f,0.5f)
                         )
                     }
                     if (center != null && radius != null) {
