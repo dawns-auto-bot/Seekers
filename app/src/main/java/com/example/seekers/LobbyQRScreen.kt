@@ -62,7 +62,7 @@ fun LobbyQRScreen(
         scope.launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
             vm.getLobby(gameId)
-            vm.getPlayer(gameId, playerId)
+            vm.getPlayer(gameId, FirestoreHelper.uid!!)
         }
     }
 
@@ -74,7 +74,7 @@ fun LobbyQRScreen(
                         Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
                             .show()
                     }
-                    vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
+                    vm.updateUser(FirestoreHelper.uid!!, mapOf(Pair("currentGameId", "")))
                     navController.navigate(NavRoutes.StartGame.route)
                 }
                 LobbyStatus.COUNTDOWN.value -> {
@@ -89,10 +89,10 @@ fun LobbyQRScreen(
 
     LaunchedEffect(players) {
         if (players.isNotEmpty()) {
-            val currentPlayer = players.find { it.playerId == playerId }
+            val currentPlayer = players.find { it.playerId == FirestoreHelper.uid!! }
             if (currentPlayer == null) {
                 Toast.makeText(context, "You were kicked from the lobby", Toast.LENGTH_LONG).show()
-                vm.updateUser(playerId, mapOf(Pair("currentGameId", "")))
+                vm.updateUser(FirestoreHelper.uid!!, mapOf(Pair("currentGameId", "")))
                 navController.navigate(NavRoutes.StartGame.route)
             }
         }
@@ -181,7 +181,7 @@ fun LobbyQRScreen(
             LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
                 vm.removePlayer(gameId, "")
                 vm.updateUser(
-                    playerId,
+                    FirestoreHelper.uid!!,
                     mapOf(Pair("currentGameId", ""))
                 )
                 navController.navigate(NavRoutes.StartGame.route)
@@ -193,7 +193,7 @@ fun LobbyQRScreen(
                     Pair("status", LobbyStatus.DELETED.value)
                 )
                 vm.updateUser(
-                    playerId,
+                    FirestoreHelper.uid!!,
                     mapOf(Pair("currentGameId", ""))
                 )
                 vm.updateLobby(changeMap, gameId)
@@ -219,7 +219,7 @@ fun EditRulesDialog(
     Dialog(onDismissRequest) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White
+            color = Color.White,
         ) {
             Box(
                 contentAlignment = Alignment.Center
@@ -280,6 +280,7 @@ fun ShowRules(vm: LobbyViewModel) {
         Text(text = "Maximum amount of players: ${lobby?.maxPlayers}")
         Text(text = "Time limit: ${lobby?.timeLimit}")
         Text(text = "Play area radius: ${lobby?.radius}")
+        Text(text = "Time to hide: ${lobby?.countdown}")
     }
 }
 

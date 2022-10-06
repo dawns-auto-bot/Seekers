@@ -61,6 +61,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
 import com.example.seekers.general.CustomButton
+import kotlinx.coroutines.Dispatchers
 
 class MainActivity : ComponentActivity() {
 
@@ -176,16 +177,6 @@ fun MyAppNavHost() {
             val gameId = it.arguments!!.getString("gameId")!!
             LobbyQRScreen(navController = navController, gameId = gameId)
         }
-        //Radar
-        composable(
-            NavRoutes.Radar.route + "/{gameId}",
-            arguments = listOf(
-                navArgument("gameId") { type = NavType.StringType },
-            )
-        ) {
-            val gameId = it.arguments!!.getString("gameId")!!
-            RadarScreen(navController = navController, gameId = gameId)
-        }
         //QR Scanner
         composable(NavRoutes.Scanner.route + "/{nickname}/{avatarId}",
             arguments = listOf(
@@ -229,36 +220,81 @@ fun MyAppNavHost() {
 }
 
 @Composable
-fun LoginBtn(navController: NavController) {
-    Button(onClick = {
-        navController.navigate(NavRoutes.StartGame.route)
-    }) {
-        Text(text = "fake login button")
-    }
-}
-
-@Composable
 fun MainScreen(navController: NavController) {
     val auth = Firebase.auth
-    val authenticationViewModel = AuthenticationViewModel(auth)
-    authenticationViewModel.initializeUser()
+    val vm = AuthenticationViewModel(auth)
+    vm.initializeUser()
     val token = stringResource(R.string.default_web_client_id)
     val context = LocalContext.current
-    val loggedInUser: FirebaseUser? by authenticationViewModel.user.observeAsState(null)
+    val loggedInUser: FirebaseUser? by vm.user.observeAsState(null)
+    val gameStatus by vm.gameStatus.observeAsState()
+    val gameId by vm.currentGameId.observeAsState()
+    val userIsInUsers by vm.userIsInUsers.observeAsState()
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.Default) {
+            delay(1000)
+            loading = false
+        }
+    }
 
     LaunchedEffect(loggedInUser) {
         loggedInUser?.let {
-            navController.navigate(NavRoutes.StartGame.route)
+            vm.checkUserInUsers(it.uid)
+        }
+    }
+
+    LaunchedEffect(userIsInUsers) {
+        userIsInUsers?.let {
+            if (it) {
+                vm.checkCurrentGame(loggedInUser!!.uid)
+            } else {
+                val changeMap = mapOf(
+                    Pair("currentGameId", "")
+                )
+                vm.updateUserDoc(loggedInUser!!.uid, changeMap)
+                navController.navigate(NavRoutes.StartGame.route)
+            }
+        }
+    }
+
+    LaunchedEffect(gameId) {
+        gameId?.let {
+            if (it.isBlank()) {
+                navController.navigate(NavRoutes.StartGame.route)
+            } else {
+                vm.checkGameStatus(it)
+            }
+        }
+    }
+
+    LaunchedEffect(gameStatus) {
+        gameStatus?.let {
+            println("gameId $gameId")
+            gameId ?: return@LaunchedEffect
+            println("gameStatus $it")
+            when (it) {
+                LobbyStatus.CREATED.value -> {
+                    navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
+                }
+                LobbyStatus.COUNTDOWN.value -> {
+                    navController.navigate(NavRoutes.Countdown.route + "/$gameId")
+                }
+                LobbyStatus.ACTIVE.value -> {
+                    navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
+                }
+            }
         }
     }
 
     val launcher = googleRememberFirebaseAuthLauncher(
         onAuthComplete = {
-            authenticationViewModel.setUser(it.user)
+            vm.setUser(it.user)
             Log.d("authenticated", "MainScreen: ${auth.currentUser}")
         },
         onAuthError = {
-            authenticationViewModel.setUser(null)
+            vm.setUser(null)
             Log.d("authenticated", "MainScreen: ${it.message}")
         }
     )
@@ -269,9 +305,9 @@ fun MainScreen(navController: NavController) {
         modifier = Modifier.fillMaxHeight()
     ) {
 
-        if (loggedInUser == null) {
+        if (loggedInUser == null && !loading) {
             CreateUserForm(
-                model = authenticationViewModel,
+                model = vm,
                 auth = auth,
                 navController = navController
             )
@@ -297,19 +333,15 @@ fun MainScreen(navController: NavController) {
                 )
             }
 
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CustomButton(onClick = {
-                    navController.navigate(NavRoutes.StartGame.route)
-                }, text = "Start game")
-                Spacer(modifier = Modifier.height(50.dp))
-                CustomButton(onClick = {
-                    authenticationViewModel.logOut()
-                }, text = "Sign out")
+        }
+        else {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    strokeWidth = 5.dp,
+                    color = MaterialTheme.colors.primary,
+                    modifier = Modifier
+                        .size(100.dp)
+                )
             }
         }
     }
@@ -382,7 +414,6 @@ fun CreateUserForm(
                             )
                                 .addOnCompleteListener() {
                                     model.setUser(auth.currentUser)
-                                    println(it.result.user)
                                 }
                         }
                     }, text = "Create an account"
@@ -392,15 +423,17 @@ fun CreateUserForm(
     }
 }
 
-@Composable
-fun GoogleButton() {
-
-}
-
 class AuthenticationViewModel(auth: FirebaseAuth) : ViewModel() {
 
     var fireBaseAuth = auth
     var user = MutableLiveData<FirebaseUser>(null)
+    var userIsInUsers = MutableLiveData<Boolean>()
+    var firestore = FirestoreHelper
+    val currentGameId = MutableLiveData<String>()
+    val gameStatus = MutableLiveData<Int>()
+
+    fun updateUserDoc(userId: String, changeMap: Map<String, Any>) =
+        firestore.updateUser(userId, changeMap)
 
     fun initializeUser() {
         user.value = fireBaseAuth.currentUser
@@ -415,6 +448,37 @@ class AuthenticationViewModel(auth: FirebaseAuth) : ViewModel() {
         user.value = null
     }
 
+    fun checkUserInUsers(userId: String) {
+        firestore.usersRef.get().addOnSuccessListener {
+            val userList = it.documents.map { docs ->
+                docs.id
+            }
+            userIsInUsers.postValue(userList.contains(userId))
+        }
+    }
+
+    fun checkCurrentGame(playerId: String) {
+        firestore.getUser(playerId).get()
+            .addOnFailureListener {
+                Log.e(TAG, "checkCurrentGame: ", it)
+            }
+            .addOnSuccessListener {
+                val gameId = it.getString("currentGameId")
+                gameId?.let { id ->
+                    currentGameId.postValue(id)
+                }
+            }
+    }
+
+    fun checkGameStatus(gameId: String) {
+        firestore.getLobby(gameId).get()
+            .addOnSuccessListener {
+                val lobby = it.toObject(Lobby::class.java)
+                lobby?.let { lobby ->
+                    println("checkGameStatus " + lobby.status.toString())
+                    gameStatus.postValue(lobby.status) }
+            }
+    }
 }
 
 @Composable

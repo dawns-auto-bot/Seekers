@@ -16,6 +16,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
@@ -34,7 +36,6 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun RadarScreen(
-    navController: NavController,
     vm: RadarViewModel = viewModel(),
     gameId: String
 ) {
@@ -53,7 +54,7 @@ fun RadarScreen(
         val text = when (scanning) {
             ScanningStatus.BEFORE_SCAN.value -> "Scan to find nearby players"
             ScanningStatus.SCANNING.value -> "Scanning..."
-            ScanningStatus.SCANNING_STOPPED.value -> "Found ${playersNearBy ?: 0} players nearby"
+            ScanningStatus.SCANNING_STOPPED.value -> "Found ${playersInGame.size} players nearby"
             else -> ""
         }
         Text(
@@ -61,14 +62,14 @@ fun RadarScreen(
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
-        FoundPlayerList(players = playersInGame, vm = vm, gameId = gameId)
+        FoundPlayerList(playersAndDistance = playersInGame, vm = vm, gameId = gameId)
         CustomButton(text = "Scan") {
             vm.updateScanStatus(ScanningStatus.SCANNING.value)
             scope.launch {
                 val gotPlayers = withContext(Dispatchers.IO) {
                     vm.getPlayers(gameId)
                 }
-                if(gotPlayers) {
+                if (gotPlayers) {
                     vm.updateScanStatus(ScanningStatus.SCANNING_STOPPED.value)
                 }
             }
@@ -84,69 +85,20 @@ enum class ScanningStatus(val value: Int) {
 
 @Composable
 fun FoundPlayerList(
-    players: List<Player>,
+    playersAndDistance: List<Pair<Player, Float>>,
     vm: RadarViewModel,
     gameId: String
 ) {
-    val seekersGeoPoint = GeoPoint(60.22382613352466, 24.758245842202495)
-    val seekerConvertedToLocation = Location(LocationManager.GPS_PROVIDER)
-    seekerConvertedToLocation.latitude = seekersGeoPoint.latitude
-    seekerConvertedToLocation.longitude = seekersGeoPoint.longitude
-
-    players.forEach { player ->
-        val playerConvertedToLocation = Location(LocationManager.GPS_PROVIDER)
-        playerConvertedToLocation.latitude = player.location.latitude
-        playerConvertedToLocation.longitude = player.location.longitude
-
-        val distanceFromSeeker = seekerConvertedToLocation.distanceTo(playerConvertedToLocation)
-        Log.d("location", "compare to: $distanceFromSeeker")
-        if (distanceFromSeeker <= 10) {
-            val changeMap = mapOf(
-                Pair("distanceStatus", PlayerDistance.WITHIN10.value)
-            )
-            vm.updatePlayerDistanceStatus(
-                changeMap,
-                player,
-                gameId
-            )
-        } else if (distanceFromSeeker > 10 && distanceFromSeeker <= 50) {
-            val changeMap = mapOf(
-                Pair("distanceStatus", PlayerDistance.WITHIN50.value)
-            )
-            vm.updatePlayerDistanceStatus(
-                changeMap,
-                player,
-                gameId
-            )
-        } else if (distanceFromSeeker > 50 && distanceFromSeeker <= 100) {
-            val changeMap = mapOf(
-                Pair("distanceStatus", PlayerDistance.WITHIN100.value)
-            )
-            vm.updatePlayerDistanceStatus(
-                changeMap,
-                player,
-                gameId
-            )
-        } else {
-            val changeMap = mapOf(
-                Pair("distanceStatus", PlayerDistance.NOT_IN_RADAR.value)
-            )
-            vm.updatePlayerDistanceStatus(
-                changeMap,
-                player,
-                gameId
-            )
-        }
-    }
-
-
+    val height = LocalConfiguration.current.screenHeightDp * 0.5
 
     LazyColumn(
-        modifier = Modifier.padding(15.dp),
+        modifier = Modifier
+            .padding(15.dp)
+            .height(height.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(players) { player ->
-            FoundPlayerCard(player = player)
+        items(playersAndDistance) { player ->
+            FoundPlayerCard(player = player.first, distance = player.second)
         }
     }
 }
@@ -154,6 +106,7 @@ fun FoundPlayerList(
 @Composable
 fun FoundPlayerCard(
     player: Player,
+    distance: Float
 ) {
 
     val avaratID = when (player.avatarId) {
@@ -206,6 +159,12 @@ fun FoundPlayerCard(
                 modifier = Modifier
                     .align(Alignment.Center)
             )
+            Text(
+                text = "${distance.toInt()} m",
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+            )
         }
     }
 }
@@ -215,24 +174,54 @@ class RadarViewModel() : ViewModel() {
     val playersNearByCount = MutableLiveData<Int>()
     private val _scanningStatus = MutableLiveData<Int>()
     val scanningStatus: LiveData<Int> = _scanningStatus
+    val players = MutableLiveData(listOf<Pair<Player, Float>>())
 
-    //    private val _playersNearByList = MutableLiveData(listOf<Player>())
-//    val playersNearByList: LiveData<List<Player>> = _playersNearByList
-    val players = MutableLiveData(listOf<Player>())
+    fun filterPlayersList(list: List<Player>) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val seekersGeoPoint = GeoPoint(60.22382613352466, 24.758245842202495)
+            val seekerConvertedToLocation = Location(LocationManager.GPS_PROVIDER)
+            seekerConvertedToLocation.latitude = seekersGeoPoint.latitude
+            seekerConvertedToLocation.longitude = seekersGeoPoint.longitude
+
+            val playersWithDistance = mutableListOf<Pair<Player, Float>>()
+
+            list.forEach { player ->
+                val playerConvertedToLocation = Location(LocationManager.GPS_PROVIDER)
+                playerConvertedToLocation.latitude = player.location.latitude
+                playerConvertedToLocation.longitude = player.location.longitude
+
+                val distanceFromSeeker =
+                    seekerConvertedToLocation.distanceTo(playerConvertedToLocation)
+                Log.d("location", "compare to: $distanceFromSeeker")
+                if (distanceFromSeeker <= 10) {
+                    player.distanceStatus = PlayerDistance.WITHIN10.value
+                    playersWithDistance.add(Pair(player, distanceFromSeeker))
+                } else if (distanceFromSeeker > 10 && distanceFromSeeker <= 50) {
+                    player.distanceStatus = PlayerDistance.WITHIN50.value
+                    playersWithDistance.add(Pair(player, distanceFromSeeker))
+                } else if (distanceFromSeeker > 50 && distanceFromSeeker <= 100) {
+                    player.distanceStatus = PlayerDistance.WITHIN100.value
+                    playersWithDistance.add(Pair(player, distanceFromSeeker))
+                }
+            }
+
+            val playersFiltered =
+                playersWithDistance.filter {
+                    it.first.distanceStatus != PlayerDistance.NOT_IN_RADAR.value && it.first.playerId != FirestoreHelper.uid!!
+                }
+            players.postValue(playersFiltered.sortedBy { it.second })
+        }
+    }
 
     fun updateScanStatus(value: Int) {
         _scanningStatus.value = value
     }
 
-    suspend fun getPlayers(gameId: String) :Boolean {
+    suspend fun getPlayers(gameId: String): Boolean {
         firestore.getPlayers(gameId)
-            .addSnapshotListener { list, e ->
-                list ?: run {
-                    Log.e("getPlayers", "getPlayers: ", e)
-                    return@addSnapshotListener
-                }
+            .get().addOnSuccessListener { list ->
                 val playerList = list.toObjects(Player::class.java)
-                players.postValue(playerList)
+                filterPlayersList(playerList)
             }
         return true
     }

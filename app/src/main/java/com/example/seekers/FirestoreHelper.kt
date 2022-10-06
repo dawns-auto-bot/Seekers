@@ -143,7 +143,7 @@ class Player(
     val playerId: String = "",
     val inLobbyStatus: Int = 0,
     val inGameStatus: Int = 0,
-    val distanceStatus: Int = 0,
+    var distanceStatus: Int = 0,
     val location: GeoPoint = GeoPoint(0.0, 0.0)
 ) : Serializable
 
@@ -173,5 +173,3 @@ enum class LobbyStatus(val value: Int) {
     FINISHED(3),
     DELETED(4),
 }
-
-val playerId = "souly"

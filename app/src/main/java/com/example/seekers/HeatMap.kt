@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.location.Location
 import android.os.CountDownTimer
 import android.os.Looper
 import android.util.Log
@@ -13,13 +12,11 @@ import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -30,6 +27,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
@@ -68,6 +66,8 @@ fun HeatMap(
     val movingPlayers by vm.movingPlayers.observeAsState(listOf())
     val cameraPositionState = rememberCameraPositionState()
     var minZoom by remember { mutableStateOf(17F) }
+    var showRadar by remember { mutableStateOf(false) }
+
     val permissionLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
             locationAllowed = allowed
@@ -88,7 +88,7 @@ fun HeatMap(
             MapUiSettings(
                 compassEnabled = true,
                 indoorLevelPickerEnabled = true,
-                mapToolbarEnabled = true,
+                mapToolbarEnabled = false,
                 myLocationButtonEnabled = mapControl,
                 rotationGesturesEnabled = mapControl,
                 scrollGesturesEnabled = mapControl,
@@ -115,7 +115,7 @@ fun HeatMap(
 
     LaunchedEffect(locationAllowed) {
         if (locationAllowed) {
-            vm.startLocationUpdatesForPlayer(playerId, gameId)
+            vm.startLocationUpdatesForPlayer(FirestoreHelper.uid!!, gameId)
         }
     }
 
@@ -159,7 +159,7 @@ fun HeatMap(
                 properties = MapProperties(
                     mapType = MapType.SATELLITE,
                     isMyLocationEnabled = true,
-                    maxZoomPreference = 18F,
+                    maxZoomPreference = 17.5F,
                     minZoomPreference = minZoom,
                     latLngBoundsForCameraTarget =
                     getBounds(
@@ -233,7 +233,8 @@ fun HeatMap(
                         .padding(8.dp)
                 ) {
                     Button(onClick = {
-                        vm.updateUser(mapOf(Pair("currentGameId", "")), playerId)
+                        vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
+                        vm.removeLocationUpdates()
                         navController.navigate(NavRoutes.StartGame.route)
                     }) {
                         Text(text = "Leave")
@@ -241,11 +242,14 @@ fun HeatMap(
                 }
                 Button(
                     onClick = {
-                        navController.navigate(NavRoutes.Radar.route + "/$gameId")
+                        showRadar = true
                     },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     Text(text = "Radar")
+                }
+                if (showRadar) {
+                    RadarDialog(gameId = gameId) { showRadar = false }
                 }
             } else {
                 Text(text = "Location permission needed")
@@ -253,6 +257,26 @@ fun HeatMap(
         }
     }
 
+}
+
+@Composable
+fun RadarDialog(
+    gameId: String,
+    onDismiss: () -> Unit
+) {
+
+    val height = LocalConfiguration.current.screenHeightDp * 0.8
+
+    Dialog(onDismissRequest = { onDismiss() }) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            modifier = Modifier.height(height.dp)
+        ) {
+            RadarScreen( gameId = gameId)
+        }
+
+    }
 }
 
 @Composable
@@ -322,7 +346,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     val timeRemaining = MutableLiveData<Int>()
     val players = MutableLiveData<List<Player>>()
     val playersWithoutSelf = Transformations.map(players) { players ->
-        players.filter { it.playerId != playerId }
+        players.filter { it.playerId != FirestoreHelper.uid!! }
     }
     val heatPositions = Transformations.map(playersWithoutSelf) { players ->
         players.filter { it.inGameStatus == InGameStatus.PLAYER.value }
@@ -469,11 +493,15 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     fun updateUser(changeMap: Map<String, Any>, uid: String) =
         firestore.updateUser(changeMap = changeMap, userId = uid)
 
+    fun removePlayerFromLobby(gameId: String, playerId: String) {
+        firestore.removePlayer(gameId, playerId)
+    }
     private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
+    private lateinit var locationCallback2: LocationCallback
 
     @SuppressLint("MissingPermission")
     fun startLocationUpdatesForPlayer(playerId: String, gameId: String) {
-        val locationCallback2 = object : LocationCallback() {
+        locationCallback2 = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 for (location in locationResult.locations) {
                     val changeMap = mapOf(
@@ -489,37 +517,12 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
             locationCallback2,
             Looper.getMainLooper()
         )
-
         Log.d("DEBUG", "started location updates 2")
     }
-
-//    private val locationCallback = object : LocationCallback() {
-//        override fun onLocationResult(locationResult: LocationResult) {
-//            for (location in locationResult.locations) {
-//                val changeMap = mapOf(
-//                    Pair("location", GeoPoint(location.latitude, location.longitude))
-//                )
-//                firestore.updatePlayerLocation(changeMap, playerId, gameId)
-//                locationData.postValue(location)
-//            }
-//        }
-//    }
-
-//    @SuppressLint("MissingPermission")
-//    fun startLocationUpdates() {
-//        fusedLocationClient.lastLocation
-//            .addOnSuccessListener { location: Location? ->
-//                location?.also {
-//                    locationData.postValue(location)
-//                }
-//            }
-//
-//        fusedLocationClient.requestLocationUpdates(
-//            locationRequest,
-//            locationCallback,
-//            Looper.getMainLooper()
-//        )
-//    }
+    fun removeLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback2)
+        Log.d("DEBUG", "removed location updates")
+    }
 }
 
 //source: https://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds

@@ -55,13 +55,13 @@ fun QrScannerScreen(navController: NavHostController, nickname: String, avatarId
             val player = Player(
                 nickname = nickname,
                 avatarId = avatarId,
-                playerId = playerId,
+                playerId = FirestoreHelper.uid!!,
                 inLobbyStatus = InLobbyStatus.JOINED.value,
                 inGameStatus = InGameStatus.PLAYER.value
             )
             firestore.addPlayer(player, it)
             firestore.updateUser(
-                playerId,
+                FirestoreHelper.uid!!,
                 mapOf(Pair("currentGameId", it))
             )
             navController.navigate(NavRoutes.LobbyQR.route + "/$it")

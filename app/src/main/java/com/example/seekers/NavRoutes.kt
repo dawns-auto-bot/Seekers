@@ -7,7 +7,6 @@ sealed class NavRoutes(val route: String) {
     object AvatarPicker: NavRoutes("AvatarPicker")
     object LobbyQR: NavRoutes("LobbyQR")
     object Scanner: NavRoutes("Scanner")
-    object Radar: NavRoutes("Radar")
     object Countdown: NavRoutes("Countdown")
     object Heatmap: NavRoutes("Heatmap")
 }

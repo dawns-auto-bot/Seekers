@@ -119,17 +119,17 @@ fun LobbyCreationScreen(
                 val player = Player(
                     nickname = nickname,
                     avatarId = avatarId,
-                    playerId = playerId,
+                    playerId = FirestoreHelper.uid!!,
                     inLobbyStatus = InLobbyStatus.CREATOR.value,
                     inGameStatus = InGameStatus.SEEKER.value
                 )
                 vm.addPlayer(player, gameId)
                 vm.updateUser(
-                    playerId,
+                    FirestoreHelper.uid!!,
                     mapOf(Pair("currentGameId", gameId))
                 )
                 mapvm.removeLocationUpdates()
-                mapvm.startLocationUpdatesForPlayer(playerId, gameId)
+//                mapvm.startLocationUpdatesForPlayer(playerId, gameId)
                 navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
             }
         }
@@ -227,18 +227,3 @@ fun Input(
         }
     }
 }
-
-//@Preview
-//@Composable
-//fun InputPreview() {
-//    SeekersTheme {
-//        LobbyCreationScreen()
-//    }
-//}
-
-//@Preview
-//@Composable
-//fun QrPrev() {
-//    val bitmap = generateQRCode("test")
-//    Image(modifier = Modifier.size(100.dp), bitmap = bitmap.asImageBitmap(), contentDescription = "test")
-//}
