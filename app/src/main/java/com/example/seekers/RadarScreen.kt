@@ -88,7 +88,7 @@ fun FoundPlayerList(
     vm: RadarViewModel,
     gameId: String
 ) {
-    val seekersGeoPoint = GeoPoint(60.42362492053396, 24.662040959914883)
+    val seekersGeoPoint = GeoPoint(60.22382613352466, 24.758245842202495)
     val seekerConvertedToLocation = Location(LocationManager.GPS_PROVIDER)
     seekerConvertedToLocation.latitude = seekersGeoPoint.latitude
     seekerConvertedToLocation.longitude = seekersGeoPoint.longitude

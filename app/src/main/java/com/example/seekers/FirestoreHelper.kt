@@ -174,4 +174,4 @@ enum class LobbyStatus(val value: Int) {
     DELETED(4),
 }
 
-val playerId = "bob"
+val playerId = "souly"

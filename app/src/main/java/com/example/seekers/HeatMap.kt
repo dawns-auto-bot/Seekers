@@ -62,7 +62,8 @@ fun HeatMap(
     val lobby by vm.lobby.observeAsState()
     var timer: CountDownTimer? by remember { mutableStateOf(null) }
     val timeRemaining by vm.timeRemaining.observeAsState()
-    val center by vm.center.observeAsState()
+//    val center by vm.center.observeAsState()
+    var center by remember { mutableStateOf(LatLng(60.22382613352466, 24.758245842202495)) }
     val heatPositions by vm.heatPositions.observeAsState(listOf())
     val movingPlayers by vm.movingPlayers.observeAsState(listOf())
     val cameraPositionState = rememberCameraPositionState()
@@ -103,6 +104,7 @@ fun HeatMap(
         vm.getPlayers(gameId)
         vm.getLobby(gameId)
         vm.getTime(gameId)
+        vm.addMockPlayers(gameId)
         if (!locationAllowed) {
             permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -128,6 +130,7 @@ fun HeatMap(
                     }
                     vm.updateCountdown(p0.div(1000).toInt())
                 }
+
                 override fun onFinish() {
                     Toast.makeText(context, "The game is over", Toast.LENGTH_SHORT).show()
                 }
@@ -142,7 +145,7 @@ fun HeatMap(
                 LocalConfiguration.current.screenWidthDp.dp.toPx()
             }
                 .times(0.7).toInt()
-        LaunchedEffect(center) {
+//        LaunchedEffect(center) {
             lobby?.let {
                 minZoom = getBoundsZoomLevel(
                     getBounds(
@@ -167,7 +170,7 @@ fun HeatMap(
                     )
                 )
                 initialPosSet = true
-            }
+//            }
         }
     }
 
@@ -238,8 +241,8 @@ fun HeatMap(
                 }
                 Button(
                     onClick = {
-                    navController.navigate(NavRoutes.Radar.route + "/$gameId")
-                },
+                        navController.navigate(NavRoutes.Radar.route + "/$gameId")
+                    },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     Text(text = "Radar")
@@ -256,7 +259,11 @@ fun HeatMap(
 fun GameTimer(modifier: Modifier = Modifier, vm: HeatMapViewModel) {
     val countdown by vm.countdown.observeAsState()
     countdown?.let {
-        Card(modifier = modifier, backgroundColor = Color.LightGray, shape = RoundedCornerShape(25.dp)) {
+        Card(
+            modifier = modifier,
+            backgroundColor = Color.LightGray,
+            shape = RoundedCornerShape(25.dp)
+        ) {
             Row(Modifier.padding(8.dp)) {
                 Text(text = secondsToText(it))
             }
@@ -294,13 +301,14 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 
     companion object {
         val locationRequest: LocationRequest = LocationRequest.create().apply {
-            interval = 5000
-            isWaitForAccurateLocation = true
+            interval = 10 * 1000
+            isWaitForAccurateLocation = false
             priority = Priority.PRIORITY_HIGH_ACCURACY
         }
     }
 
     val firestore = FirestoreHelper
+    val isSeeker = MutableLiveData<Boolean>()
     val lobby = MutableLiveData<Lobby>()
     val radius = Transformations.map(lobby) {
         it.radius
@@ -327,7 +335,94 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         players.map { it.inGameStatus }
     }
     val countdown = MutableLiveData<Int>()
-    val locationData: MutableLiveData<Location> = MutableLiveData<Location>(null)
+
+    fun addMockPlayers(gameId: String) {
+        val mockPlayers = listOf(
+            Player(
+                nickname = "player 1",
+                avatarId = 1,
+                inGameStatus = InGameStatus.PLAYER.value,
+                location = GeoPoint(60.22338389989929, 24.756749169655805),
+                playerId = "player 1",
+                distanceStatus = PlayerDistance.WITHIN50.value
+            ),
+            Player(
+                nickname = "player 2",
+                avatarId = 5,
+                inGameStatus = InGameStatus.MOVING.value,
+                location = GeoPoint(60.22374887627318, 24.759200708558442),
+                playerId = "player 2",
+                distanceStatus = PlayerDistance.WITHIN100.value
+            ),
+            Player(
+                nickname = "player 3",
+                avatarId = 1,
+                inGameStatus = InGameStatus.PLAYER.value,
+                location = GeoPoint(60.223032239987354, 24.758830563735074),
+                playerId = "player 3",
+                distanceStatus = PlayerDistance.WITHIN10.value
+            ),
+            Player(
+                nickname = "player 4",
+                avatarId = 1,
+                inGameStatus = InGameStatus.MOVING.value,
+                location = GeoPoint(60.224550744400226, 24.756561415035257),
+                playerId = "player 4",
+                distanceStatus = PlayerDistance.WITHIN50.value
+            ),
+            Player(
+                nickname = "player 5",
+                avatarId = 1,
+                inGameStatus = InGameStatus.ELIMINATED.value,
+                location = GeoPoint(60.223405212500005, 24.75958158221728),
+                playerId = "player 5",
+                distanceStatus = PlayerDistance.WITHIN50.value
+            ),
+            Player(
+                nickname = "player 6",
+                avatarId = 1,
+                inGameStatus = InGameStatus.PLAYER.value,
+                location = GeoPoint(60.223841983003645, 24.759626485065098),
+                playerId = "player 6",
+                distanceStatus = PlayerDistance.WITHIN50.value
+            ),
+            Player(
+                nickname = "player 7",
+                avatarId = 5,
+                inGameStatus = InGameStatus.MOVING.value,
+                location = GeoPoint(60.22357557804847, 24.756681419911455),
+                playerId = "player 7",
+                distanceStatus = PlayerDistance.WITHIN100.value
+            ),
+            Player(
+                nickname = "player 8",
+                avatarId = 1,
+                inGameStatus = InGameStatus.PLAYER.value,
+                location = GeoPoint(60.22314399742664, 24.757781125478843),
+                playerId = "player 8",
+                distanceStatus = PlayerDistance.WITHIN10.value
+            ),
+            Player(
+                nickname = "player 9",
+                avatarId = 1,
+                inGameStatus = InGameStatus.MOVING.value,
+                location = GeoPoint(60.22311735646131, 24.759814239674167),
+                playerId = "player 9",
+                distanceStatus = PlayerDistance.WITHIN50.value
+            ),
+            Player(
+                nickname = "player 10",
+                avatarId = 1,
+                inGameStatus = InGameStatus.ELIMINATED.value,
+                location = GeoPoint(60.223405212500005, 24.75958158221728),
+                playerId = "player 10",
+                distanceStatus = PlayerDistance.WITHIN50.value
+            ),
+            )
+        mockPlayers.forEach {
+            firestore.addPlayer(it, gameId)
+        }
+    }
 
     fun getPlayers(gameId: String) {
         firestore.getPlayers(gameId = gameId)
@@ -390,7 +485,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         }
 
         fusedLocationClient.requestLocationUpdates(
-            MapViewModel.locationRequest,
+            locationRequest,
             locationCallback2,
             Looper.getMainLooper()
         )
