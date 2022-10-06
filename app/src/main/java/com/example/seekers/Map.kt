@@ -31,6 +31,7 @@ import com.example.seekers.ui.theme.*
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.firestore.GeoPoint
 import com.google.maps.android.compose.*
 import java.util.*
 
@@ -134,11 +135,12 @@ fun Map(
 class MapViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         val locationRequest: LocationRequest = LocationRequest.create().apply {
-            interval = 5000
+            interval = 30000
             isWaitForAccurateLocation = true
             priority = Priority.PRIORITY_HIGH_ACCURACY
         }
     }
+    val firestore = FirestoreHelper
 
     val locationData: MutableLiveData<Location> = MutableLiveData<Location>(null)
     val playAreaCenter: MutableLiveData<LatLng> = MutableLiveData<LatLng>(null)
@@ -160,10 +162,35 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             locationCallback,
             Looper.getMainLooper()
         )
+
+        Log.d("DEBUG", "started location updates")
+    }
+
+    @SuppressLint("MissingPermission")
+    fun startLocationUpdatesForPlayer(playerId: String, gameId: String) {
+        val locationCallback2 = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                for (location in locationResult.locations) {
+                    val changeMap = mapOf(
+                        Pair("location", GeoPoint(location.latitude, location.longitude))
+                    )
+                    firestore.updatePlayerLocation(changeMap, playerId, gameId)
+                }
+            }
+        }
+
+        fusedLocationClient.requestLocationUpdates(
+            locationRequest,
+            locationCallback2,
+            Looper.getMainLooper()
+        )
+
+        Log.d("DEBUG", "started location updates 2")
     }
 
     fun removeLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+        Log.d("DEBUG", "removed location updates")
     }
 
     fun updateRadius(value: Double) {
@@ -173,4 +200,5 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     fun updateCenter(location: LatLng) {
         playAreaCenter.postValue(location)
     }
+
 }

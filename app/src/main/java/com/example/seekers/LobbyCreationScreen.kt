@@ -122,6 +122,8 @@ fun LobbyCreationScreen(
                     playerId,
                     mapOf(Pair("currentGameId", gameId))
                 )
+                mapvm.removeLocationUpdates()
+                mapvm.startLocationUpdatesForPlayer(playerId, gameId)
                 navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
             }
         }
@@ -217,24 +219,6 @@ fun Input(
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
             )
         }
-    }
-}
-
-
-@Composable
-fun CustomSlider(
-    modifier: Modifier = Modifier,
-    title: String,
-    value: Float,
-    onValueChange: (Float) -> Unit
-) {
-    Column(modifier = modifier) {
-        Text(text = title)
-        Slider(
-            modifier = Modifier.fillMaxWidth(),
-            value = value,
-            onValueChange = onValueChange,
-        )
     }
 }
 

@@ -103,6 +103,17 @@ object FirestoreHelper {
             }
     }
 
+    fun updatePlayerLocation(changeMap: Map<String, Any>, playerId: String, gameId: String) {
+        val playerRef = lobbiesRef.document(gameId).collection("players").document(playerId)
+        playerRef.update(changeMap)
+            .addOnSuccessListener {
+                Log.d(TAG, "updatePlayerLocation: $playerId location updated")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "update: ", it)
+            }
+    }
+
 }
 
 class Lobby(
@@ -145,4 +156,4 @@ enum class LobbyStatus(val value: Int) {
     DELETED(2),
 }
 
-val playerId = "dom"
+val playerId = "testPlayer"
