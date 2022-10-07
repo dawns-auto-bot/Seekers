@@ -108,7 +108,7 @@ fun LobbyCreationScreen(
                 val geoPoint = GeoPoint(center!!.latitude, center!!.longitude)
                 val lobby = Lobby(
                     id = "",
-                    center = GeoPoint(60.22382613352466, 24.758245842202495),
+                    center = geoPoint,
                     maxPlayers = maxPlayers!!,
                     timeLimit = timeLimit!!,
                     radius = radius!!,

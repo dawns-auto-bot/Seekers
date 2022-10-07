@@ -35,15 +35,15 @@ import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.android.gms.location.*
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.*
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.google.maps.android.compose.*
 import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.ktx.utils.withSphericalOffset
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.*
 
 @SuppressLint("MissingPermission")
@@ -61,13 +61,14 @@ fun HeatMap(
     val lobby by vm.lobby.observeAsState()
     var timer: CountDownTimer? by remember { mutableStateOf(null) }
     val timeRemaining by vm.timeRemaining.observeAsState()
-//    val center by vm.center.observeAsState()
-    var center by remember { mutableStateOf(LatLng(60.22382613352466, 24.758245842202495)) }
+    val center by vm.center.observeAsState()
+//    var center by remember { mutableStateOf(LatLng(60.22382613352466, 24.758245842202495)) }
     val heatPositions by vm.heatPositions.observeAsState(listOf())
     val movingPlayers by vm.movingPlayers.observeAsState(listOf())
     val cameraPositionState = rememberCameraPositionState()
     var minZoom by remember { mutableStateOf(17F) }
     var showRadar by remember { mutableStateOf(false) }
+    var circleCoords by remember { mutableStateOf(listOf<LatLng>()) }
 
     val permissionLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
@@ -147,30 +148,39 @@ fun HeatMap(
             }
                 .times(0.7).toInt()
 //        LaunchedEffect(center) {
-            lobby?.let {
-                minZoom = getBoundsZoomLevel(
-                    getBounds(
-                        LatLng(
-                            it.center.latitude,
-                            it.center.longitude
-                        ), it.radius
-                    ),
-                    Size(width, width)
-                ).toFloat()
-                properties = MapProperties(
-                    mapType = MapType.SATELLITE,
-                    isMyLocationEnabled = true,
-                    maxZoomPreference = 17.5F,
-                    minZoomPreference = minZoom,
-                    latLngBoundsForCameraTarget =
-                    getBounds(
-                        LatLng(
-                            it.center.latitude,
-                            it.center.longitude
-                        ), it.radius
-                    )
+        lobby?.let {
+            minZoom = getBoundsZoomLevel(
+                getBounds(
+                    LatLng(
+                        it.center.latitude,
+                        it.center.longitude
+                    ), it.radius
+                ),
+                Size(width, width)
+            ).toFloat()
+            properties = MapProperties(
+                mapType = MapType.SATELLITE,
+                isMyLocationEnabled = true,
+                maxZoomPreference = 17.5F,
+                minZoomPreference = minZoom,
+                latLngBoundsForCameraTarget =
+                getBounds(
+                    LatLng(
+                        it.center.latitude,
+                        it.center.longitude
+                    ), it.radius
                 )
-                initialPosSet = true
+            )
+            initialPosSet = true
+            rememberCoroutineScope().launch(Dispatchers.Default) {
+                circleCoords = getCircleCoords(
+                    LatLng(
+                        it.center.latitude,
+                        it.center.longitude
+                    ), it.radius
+                )
+            }
+
 //            }
         }
     }
@@ -205,15 +215,23 @@ fun HeatMap(
                             icon = BitmapDescriptorFactory.fromBitmap(resizedBitmap),
                             title = it.nickname,
                             visible = true,
-                            anchor = Offset(0.5f,0.5f)
+                            anchor = Offset(0.5f, 0.5f)
                         )
                     }
                     if (center != null && radius != null) {
+                        if (circleCoords.isNotEmpty()) {
+                            Polygon(
+                                points = getCornerCoords(center!!, radius!!),
+                                fillColor = Color(0x8D000000),
+                                holes = listOf(circleCoords),
+                                strokeWidth = 0f,
+                            )
+                        }
+
                         Circle(
                             center = center!!,
                             radius = radius!!.toDouble(),
-                            fillColor = Color(0x19FFDE00),
-                            strokeColor = Color(0x8DBDA500)
+                            strokeColor = Color(0x8DBDA500),
                         )
                     }
 
@@ -275,7 +293,7 @@ fun RadarDialog(
             color = Color.White,
             modifier = Modifier.height(height.dp)
         ) {
-            RadarScreen( gameId = gameId)
+            RadarScreen(gameId = gameId)
         }
 
     }
@@ -303,6 +321,22 @@ fun getBounds(center: LatLng, radius: Int): LatLngBounds {
     val sw = center.withSphericalOffset(radius.div(multiplier), 225.0)
     val ne = center.withSphericalOffset(radius.div(multiplier), 45.0)
     return LatLngBounds(sw, ne)
+}
+
+fun getCornerCoords(center: LatLng, radius: Int): List<LatLng> {
+    val ne = center.withSphericalOffset(radius * 10.0, 45.0)
+    val se = center.withSphericalOffset(radius * 10.0, 135.0)
+    val sw = center.withSphericalOffset(radius * 10.0, 225.0)
+    val nw = center.withSphericalOffset(radius * 10.0, 315.0)
+    return listOf(ne, se, sw, nw)
+}
+
+fun getCircleCoords(center: LatLng, radius: Int): List<LatLng> {
+    val list = mutableListOf<LatLng>()
+    (0..360).forEach {
+        list.add(center.withSphericalOffset(radius.toDouble() + 1.0, it.toDouble()))
+    }
+    return list
 }
 
 fun secondsToText(seconds: Int): String {
@@ -444,7 +478,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
                 playerId = "player 10",
                 distanceStatus = PlayerDistance.WITHIN50.value
             ),
-            )
+        )
         mockPlayers.forEach {
             firestore.addPlayer(it, gameId)
         }
@@ -498,6 +532,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     fun removePlayerFromLobby(gameId: String, playerId: String) {
         firestore.removePlayer(gameId, playerId)
     }
+
     private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
     private lateinit var locationCallback2: LocationCallback
 
@@ -521,6 +556,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         )
         Log.d("DEBUG", "started location updates 2")
     }
+
     fun removeLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback2)
         Log.d("DEBUG", "removed location updates")
