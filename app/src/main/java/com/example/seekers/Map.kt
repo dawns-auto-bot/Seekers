@@ -48,34 +48,47 @@ fun Map(
     val playAreaRadius: Double? by vm.playAreaRadius.observeAsState(0.0)
     var sliderPosition by remember { mutableStateOf(100f) }
     var showMap by remember { mutableStateOf(true) }
+    var isCenteredToPosition by remember { mutableStateOf(false) }
+    val cameraPositionState = rememberCameraPositionState()
     vm.startLocationUpdates()
 
-    val uiSettings by remember { mutableStateOf(MapUiSettings(
-        compassEnabled = true,
-        indoorLevelPickerEnabled = true,
-        mapToolbarEnabled = true,
-        myLocationButtonEnabled = mapControl,
-        rotationGesturesEnabled = mapControl,
-        scrollGesturesEnabled = mapControl,
-        scrollGesturesEnabledDuringRotateOrZoom = mapControl,
-        tiltGesturesEnabled = mapControl,
-        zoomControlsEnabled = mapControl,
-        zoomGesturesEnabled = mapControl ))
+    val uiSettings by remember {
+        mutableStateOf(
+            MapUiSettings(
+                compassEnabled = true,
+                indoorLevelPickerEnabled = true,
+                mapToolbarEnabled = true,
+                myLocationButtonEnabled = mapControl,
+                rotationGesturesEnabled = mapControl,
+                scrollGesturesEnabled = mapControl,
+                scrollGesturesEnabledDuringRotateOrZoom = mapControl,
+                tiltGesturesEnabled = mapControl,
+                zoomControlsEnabled = mapControl,
+                zoomGesturesEnabled = mapControl
+            )
+        )
     }
 
-    val properties by remember { mutableStateOf(MapProperties(
-        mapType = MapType.NORMAL,
-        isMyLocationEnabled = true))
+    val properties by remember {
+        mutableStateOf(
+            MapProperties(
+                mapType = MapType.SATELLITE,
+                isMyLocationEnabled = true
+            )
+        )
     }
 
-    val latLng = locationData?.let { LatLng(it.latitude, it.longitude) }
-    val cameraPositionState = rememberCameraPositionState {
-        if(latLng != null) {
-            position = CameraPosition.fromLatLngZoom(latLng, 17F)
+    if (!isCenteredToPosition) {
+        LaunchedEffect(locationData) {
+            locationData?.let {
+                val latLng = it.let { LatLng(it.latitude, it.longitude) }
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(latLng, 17F)
+                isCenteredToPosition = true
+            }
         }
     }
 
-    if(showMap) {
+    if (showMap) {
         Box(
             Modifier.fillMaxSize()
         ) {
@@ -83,26 +96,35 @@ fun Map(
                 cameraPositionState = cameraPositionState,
                 properties = properties,
                 uiSettings = uiSettings
-            ) { Circle(
-                center = LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude),
-                radius = sliderPosition.toDouble(),
-                fillColor = Color(0x19FFDE00),
-                strokeColor = Color(0x8DBDA500),
-                clickable = true
             ) {
-                Toast.makeText(
-                    context,
-                    "Play area radius is ${sliderPosition.toDouble()} meters",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+                Circle(
+                    center = LatLng(
+                        cameraPositionState.position.target.latitude,
+                        cameraPositionState.position.target.longitude
+                    ),
+                    radius = sliderPosition.toDouble(),
+                    fillColor = Color(0x19FFDE00),
+                    strokeColor = Color(0x8DBDA500),
+                    clickable = true
+                ) {
+                    Toast.makeText(
+                        context,
+                        "Play area radius is ${sliderPosition.toDouble()} meters",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
             Column(Modifier.align(Alignment.BottomCenter)) {
                 CustomButton(
                     modifier = Modifier.width(150.dp),
                     text = "Define Area"
                 ) {
-                    vm.updateCenter(LatLng(cameraPositionState.position.target.latitude, cameraPositionState.position.target.longitude))
+                    vm.updateCenter(
+                        LatLng(
+                            cameraPositionState.position.target.latitude,
+                            cameraPositionState.position.target.longitude
+                        )
+                    )
                     // vm.updateRadius(sliderPosition.toDouble())
                     lobbyvm.updateRadius(sliderPosition.toInt())
                     Toast.makeText(
@@ -111,7 +133,10 @@ fun Map(
                         Toast.LENGTH_LONG
                     ).show()
 
-                    Log.d("DEBUG", "center: ${cameraPositionState.position.target.latitude}, ${cameraPositionState.position.target.longitude} - radius: ${sliderPosition.toDouble()}")
+                    Log.d(
+                        "DEBUG",
+                        "center: ${cameraPositionState.position.target.latitude}, ${cameraPositionState.position.target.longitude} - radius: ${sliderPosition.toDouble()}"
+                    )
                 }
                 Spacer(Modifier.height(15.dp))
             }
@@ -140,6 +165,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
             priority = Priority.PRIORITY_HIGH_ACCURACY
         }
     }
+
     val firestore = FirestoreHelper
 
     val locationData: MutableLiveData<Location> = MutableLiveData<Location>(null)

@@ -4,38 +4,46 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.graphics.*
 import android.os.Build
+import android.util.Log
+import android.widget.FrameLayout
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.budiyev.android.codescanner.AutoFocusMode
+import com.budiyev.android.codescanner.CodeScanner
+import com.budiyev.android.codescanner.CodeScannerView
+import com.budiyev.android.codescanner.DecodeCallback
+import com.budiyev.android.codescanner.ErrorCallback
+import com.budiyev.android.codescanner.ScanMode
+import com.google.zxing.Result
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 
-fun generateQRCode(gameId: String): Bitmap {
+fun generateQRCode(data: String): Bitmap {
     val fileOut = ByteArrayOutputStream()
 
-    QRCode(gameId)
+    QRCode(data)
         .render(cellSize = 50, margin = 25)
         .writeImage(fileOut)
 
@@ -56,6 +64,34 @@ fun getActivityRecognitionPermission(context: Context){
             ActivityCompat.requestPermissions(context as Activity, arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION), 1)
         }
     }
+}
+
+@Composable
+fun QRScanner(context: Context, onScanned: (String) -> Unit) {
+    val scannerView = CodeScannerView(context)
+    val codeScanner = CodeScanner(context, scannerView)
+    codeScanner.camera = CodeScanner.CAMERA_BACK
+    codeScanner.formats = CodeScanner.ALL_FORMATS
+    codeScanner.autoFocusMode = AutoFocusMode.SAFE
+    codeScanner.scanMode = ScanMode.SINGLE
+    codeScanner.isAutoFocusEnabled = true
+    codeScanner.isFlashEnabled = false
+    codeScanner.decodeCallback = DecodeCallback {
+        codeScanner.stopPreview()
+        codeScanner.releaseResources()
+        onScanned(it.text)
+    }
+    codeScanner.errorCallback = ErrorCallback { // or ErrorCallback.SUPPRESS
+        Log.e("qrScanner", "QrScannerScreen: ", it)
+    }
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = {
+            val layout = FrameLayout(it)
+            layout.addView(scannerView)
+            codeScanner.startPreview()
+            layout
+        })
 }
 
 @Composable
@@ -156,4 +192,28 @@ fun VerticalSlider(
                 .then(modifier)
         )
     }
+}
+
+@Composable
+fun QRCodeComponent(modifier: Modifier = Modifier, bitmap: Bitmap) {
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = "QR",
+        modifier = modifier.size(250.dp)
+    )
+}
+
+fun Bitmap.toGrayscale():Bitmap{
+
+    val matrix = ColorMatrix().apply {
+        setSaturation(0f)
+    }
+    val filter = ColorMatrixColorFilter(matrix)
+
+    val paint = Paint().apply {
+        colorFilter = filter
+    }
+
+    Canvas(this).drawBitmap(this, 0f, 0f, paint)
+    return this
 }

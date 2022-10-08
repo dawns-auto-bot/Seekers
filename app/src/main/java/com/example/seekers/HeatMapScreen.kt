@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ColorSpace
 import android.os.CountDownTimer
 import android.os.Looper
 import android.util.Log
@@ -12,15 +13,18 @@ import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.Card
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -29,11 +33,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.seekers.general.QRCodeComponent
+import com.example.seekers.general.QRScanner
+import com.example.seekers.general.generateQRCode
+import com.example.seekers.general.toGrayscale
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.*
 import com.google.firebase.Timestamp
@@ -43,12 +52,11 @@ import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.ktx.utils.withSphericalOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.*
 
 @SuppressLint("MissingPermission")
 @Composable
-fun HeatMap(
+fun HeatMapScreen(
     vm: HeatMapViewModel = viewModel(),
     mapControl: Boolean,
     gameId: String,
@@ -57,6 +65,7 @@ fun HeatMap(
     val context = LocalContext.current
     val radius by vm.radius.observeAsState()
     var locationAllowed by remember { mutableStateOf(false) }
+    var cameraIsAllowed by remember { mutableStateOf(false) }
     var initialPosSet by remember { mutableStateOf(false) }
     val lobby by vm.lobby.observeAsState()
     var timer: CountDownTimer? by remember { mutableStateOf(null) }
@@ -65,15 +74,24 @@ fun HeatMap(
 //    var center by remember { mutableStateOf(LatLng(60.22382613352466, 24.758245842202495)) }
     val heatPositions by vm.heatPositions.observeAsState(listOf())
     val movingPlayers by vm.movingPlayers.observeAsState(listOf())
+    val eliminatedPlayers by vm.eliminatedPlayers.observeAsState(listOf())
     val cameraPositionState = rememberCameraPositionState()
     var minZoom by remember { mutableStateOf(17F) }
     var showRadar by remember { mutableStateOf(false) }
+    var showQR by remember { mutableStateOf(false) }
+    var showQRScanner by remember { mutableStateOf(false) }
     var circleCoords by remember { mutableStateOf(listOf<LatLng>()) }
 
-    val permissionLauncher =
+    val locationPermissionLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
             locationAllowed = allowed
         }
+    val cameraPermissionLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
+            cameraIsAllowed = allowed
+        }
+
+
     val tileProvider by remember {
         derivedStateOf {
             val provider = HeatmapTileProvider.Builder()
@@ -91,7 +109,7 @@ fun HeatMap(
                 compassEnabled = true,
                 indoorLevelPickerEnabled = true,
                 mapToolbarEnabled = false,
-                myLocationButtonEnabled = mapControl,
+                myLocationButtonEnabled = false,
                 rotationGesturesEnabled = mapControl,
                 scrollGesturesEnabled = mapControl,
                 scrollGesturesEnabledDuringRotateOrZoom = mapControl,
@@ -108,8 +126,8 @@ fun HeatMap(
         vm.getTime(gameId)
         vm.addMockPlayers(gameId)
         if (!locationAllowed) {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         } else {
             locationAllowed = true
         }
@@ -140,6 +158,12 @@ fun HeatMap(
         }
     }
 
+    LaunchedEffect(eliminatedPlayers) {
+        eliminatedPlayers.find { it.playerId == FirestoreHelper.uid!! }?.let {
+            vm.removeLocationUpdates()
+        }
+    }
+
     if (!initialPosSet) {
         val density = LocalDensity.current
         val width =
@@ -147,95 +171,62 @@ fun HeatMap(
                 LocalConfiguration.current.screenWidthDp.dp.toPx()
             }
                 .times(0.7).toInt()
-//        LaunchedEffect(center) {
-        lobby?.let {
-            minZoom = getBoundsZoomLevel(
-                getBounds(
-                    LatLng(
-                        it.center.latitude,
-                        it.center.longitude
-                    ), it.radius
-                ),
-                Size(width, width)
-            ).toFloat()
-            properties = MapProperties(
-                mapType = MapType.SATELLITE,
-                isMyLocationEnabled = true,
-                maxZoomPreference = 17.5F,
-                minZoomPreference = minZoom,
-                latLngBoundsForCameraTarget =
-                getBounds(
-                    LatLng(
-                        it.center.latitude,
-                        it.center.longitude
-                    ), it.radius
+        LaunchedEffect(center) {
+            lobby?.let {
+                minZoom = getBoundsZoomLevel(
+                    getBounds(
+                        LatLng(
+                            it.center.latitude,
+                            it.center.longitude
+                        ), it.radius
+                    ),
+                    Size(width, width)
+                ).toFloat()
+                properties = MapProperties(
+                    mapType = MapType.SATELLITE,
+                    isMyLocationEnabled = true,
+                    maxZoomPreference = 17.5F,
+                    minZoomPreference = minZoom,
+                    latLngBoundsForCameraTarget =
+                    getBounds(
+                        LatLng(
+                            it.center.latitude,
+                            it.center.longitude
+                        ), it.radius
+                    )
                 )
-            )
-            initialPosSet = true
-            rememberCoroutineScope().launch(Dispatchers.Default) {
-                circleCoords = getCircleCoords(
-                    LatLng(
-                        it.center.latitude,
-                        it.center.longitude
-                    ), it.radius
-                )
-            }
+                initialPosSet = true
+                launch(Dispatchers.Default) {
+                    circleCoords = getCircleCoords(
+                        LatLng(
+                            it.center.latitude,
+                            it.center.longitude
+                        ), it.radius
+                    )
+                }
 
-//            }
+            }
         }
     }
 
-    properties?.let {
+    properties?.let { props ->
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (locationAllowed) {
-                GoogleMap(
-                    cameraPositionState = cameraPositionState.apply {
-                        position = CameraPosition.fromLatLngZoom(center!!, minZoom)
-                    },
-                    properties = it,
+
+                HeatMap(
+                    state = cameraPositionState,
+                    center = center,
+                    radius = radius,
+                    minZoom = minZoom,
+                    properties = props,
                     uiSettings = uiSettings,
-                ) {
-                    if (heatPositions.isNotEmpty()) {
-                        TileOverlay(
-                            tileProvider = tileProvider,
-                            transparency = 0.3f
-                        )
-                    }
-                    movingPlayers.forEach {
-                        val res = avatarList[it.avatarId]
-                        val bitmap = BitmapFactory.decodeResource(context.resources, res)
-                        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 50, 50, false)
-                        Marker(
-                            state = MarkerState(
-                                position = LatLng(
-                                    it.location.latitude,
-                                    it.location.longitude
-                                )
-                            ),
-                            icon = BitmapDescriptorFactory.fromBitmap(resizedBitmap),
-                            title = it.nickname,
-                            visible = true,
-                            anchor = Offset(0.5f, 0.5f)
-                        )
-                    }
-                    if (center != null && radius != null) {
-                        if (circleCoords.isNotEmpty()) {
-                            Polygon(
-                                points = getCornerCoords(center!!, radius!!),
-                                fillColor = Color(0x8D000000),
-                                holes = listOf(circleCoords),
-                                strokeWidth = 0f,
-                            )
-                        }
+                    heatPositions = heatPositions,
+                    movingPlayers = movingPlayers,
+                    eliminatedPlayers = eliminatedPlayers,
+                    tileProvider = tileProvider,
+                    circleCoords = circleCoords
+                )
 
-                        Circle(
-                            center = center!!,
-                            radius = radius!!.toDouble(),
-                            strokeColor = Color(0x8DBDA500),
-                        )
-                    }
-
-                }
                 timer?.let {
                     GameTimer(
                         modifier = Modifier
@@ -247,6 +238,7 @@ fun HeatMap(
                         it.start()
                     }
                 }
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -260,6 +252,7 @@ fun HeatMap(
                         Text(text = "Leave")
                     }
                 }
+
                 Button(
                     onClick = {
                         showRadar = true
@@ -268,15 +261,136 @@ fun HeatMap(
                 ) {
                     Text(text = "Radar")
                 }
+
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    QRButton {
+                        if (!showQR) {
+                            showQR = true
+                        }
+                    }
+                    QRScanButton {
+                        if (!cameraIsAllowed) {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        } else {
+                            cameraIsAllowed = true
+                        }
+                        if (!showQRScanner) {
+                            showQRScanner = true
+                        }
+                    }
+                }
+
                 if (showRadar) {
                     RadarDialog(gameId = gameId) { showRadar = false }
                 }
+
+                if (showQR) {
+                    ShowMyQRDialog {
+                        showQR = false
+                    }
+                }
+
+                if (showQRScanner && cameraIsAllowed) {
+                    QRScannerDialog(onDismiss = { showQRScanner = false }) {
+                        vm.setPlayerFound(gameId, it)
+                        showQRScanner = false
+                    }
+                }
+
             } else {
                 Text(text = "Location permission needed")
             }
         }
     }
 
+}
+
+@Composable
+fun HeatMap(
+    state: CameraPositionState,
+    center: LatLng?,
+    radius: Int?,
+    minZoom: Float,
+    properties: MapProperties,
+    uiSettings: MapUiSettings,
+    heatPositions: List<LatLng>,
+    movingPlayers: List<Player>,
+    tileProvider: HeatmapTileProvider,
+    circleCoords: List<LatLng>,
+    eliminatedPlayers: List<Player>
+) {
+    val context = LocalContext.current
+    GoogleMap(
+        cameraPositionState = state.apply {
+            position = CameraPosition.fromLatLngZoom(center!!, minZoom)
+        },
+        properties = properties,
+        uiSettings = uiSettings,
+    ) {
+        if (heatPositions.isNotEmpty()) {
+            TileOverlay(
+                tileProvider = tileProvider,
+                transparency = 0.3f
+            )
+        }
+        movingPlayers.forEach {
+            val res = avatarList[it.avatarId]
+            val bitmap = BitmapFactory.decodeResource(context.resources, res)
+            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 50, 50, false)
+            Marker(
+                state = MarkerState(
+                    position = LatLng(
+                        it.location.latitude,
+                        it.location.longitude
+                    )
+                ),
+                icon = BitmapDescriptorFactory.fromBitmap(resizedBitmap),
+                title = it.nickname,
+                visible = true,
+                anchor = Offset(0.5f, 0.5f)
+            )
+        }
+        eliminatedPlayers.forEach {
+            val res = avatarList[it.avatarId]
+            val bitmap = BitmapFactory.decodeResource(context.resources, res)
+            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 50, 50, false)
+            val grayedBitmap = resizedBitmap.toGrayscale()
+            Marker(
+                state = MarkerState(
+                    position = LatLng(
+                        it.location.latitude,
+                        it.location.longitude
+                    )
+                ),
+                icon = BitmapDescriptorFactory.fromBitmap(grayedBitmap),
+                title = it.nickname + " (eliminated)",
+                visible = true,
+                anchor = Offset(0.5f, 0.5f)
+            )
+        }
+        if (center != null && radius != null) {
+            if (circleCoords.isNotEmpty()) {
+                Polygon(
+                    points = getCornerCoords(center, radius),
+                    fillColor = Color(0x8D000000),
+                    holes = listOf(circleCoords),
+                    strokeWidth = 0f,
+                )
+            }
+
+            Circle(
+                center = center,
+                radius = radius.toDouble(),
+                strokeColor = Color(0x8DBDA500),
+            )
+        }
+
+    }
 }
 
 @Composable
@@ -296,6 +410,64 @@ fun RadarDialog(
             RadarScreen(gameId = gameId)
         }
 
+    }
+}
+
+@Composable
+fun QRButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(shape = CircleShape, elevation = 4.dp, modifier = modifier.clickable { onClick() }) {
+        Icon(
+            imageVector = Icons.Filled.QrCode,
+            contentDescription = "qr",
+            modifier = Modifier.padding(8.dp)
+        )
+    }
+}
+
+@Composable
+fun ShowMyQRDialog(onDismiss: () -> Unit) {
+    val playerId = FirestoreHelper.uid!!
+//    val playerId = "player 1"
+    val qrBitmap = generateQRCode(playerId)
+    Dialog(onDismissRequest = onDismiss) {
+        Card(backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = "Oh no, you got caught!")
+                Spacer(modifier = Modifier.height(16.dp))
+                QRCodeComponent(bitmap = qrBitmap)
+            }
+        }
+    }
+}
+
+@Composable
+fun QRScanButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Card(shape = CircleShape, elevation = 4.dp, modifier = modifier.clickable { onClick() }) {
+        Icon(
+            imageVector = Icons.Filled.QrCodeScanner,
+            contentDescription = "qrScan",
+            modifier = Modifier.padding(8.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun QRScannerDialog(onDismiss: () -> Unit, onScanned: (String) -> Unit) {
+    val context = LocalContext.current
+    Dialog(
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        onDismissRequest = onDismiss
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            QRScanner(context = context, onScanned = onScanned)
+            Button(onClick = onDismiss, modifier = Modifier.align(Alignment.BottomCenter)) {
+                Text(text = "Cancel")
+            }
+        }
     }
 }
 
@@ -390,6 +562,9 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     }
     val movingPlayers = Transformations.map(playersWithoutSelf) { players ->
         players.filter { it.inGameStatus == InGameStatus.MOVING.value }
+    }
+    val eliminatedPlayers = Transformations.map(playersWithoutSelf) { players ->
+        players.filter { it.inGameStatus == InGameStatus.ELIMINATED.value }
     }
     val statuses = Transformations.map(players) { players ->
         players.map { it.inGameStatus }
@@ -531,6 +706,15 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 
     fun removePlayerFromLobby(gameId: String, playerId: String) {
         firestore.removePlayer(gameId, playerId)
+    }
+
+    fun setPlayerFound(gameId: String, playerId: String) {
+        firestore.updatePlayerInGameStatus(
+            inGameStatus = InGameStatus.ELIMINATED.value,
+            gameId = gameId,
+            playerId = playerId
+        )
+//        sendFoundNotification()
     }
 
     private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)

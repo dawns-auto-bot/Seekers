@@ -212,7 +212,7 @@ fun MyAppNavHost() {
             )
         ) {
             val gameId = it.arguments!!.getString("gameId")!!
-            HeatMap(mapControl = true, navController = navController, gameId = gameId)
+            HeatMapScreen(mapControl = true, navController = navController, gameId = gameId)
         }
     }
 

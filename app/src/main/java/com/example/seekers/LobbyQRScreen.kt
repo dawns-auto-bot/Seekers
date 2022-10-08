@@ -35,6 +35,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
+import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
@@ -152,20 +153,23 @@ fun LobbyQRScreen(
                     .padding(horizontal = 15.dp), players, isCreator, vm, gameId
             )
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Column() {
+                Column {
                     CustomButton(text = "${if (isCreator) "Edit" else "Check"} Rules") {
                         showEditRulesDialog = true
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    CustomButton(text = "Start Game") {
-                        vm.updateLobby(
-                            mapOf(
-                                Pair("status", LobbyStatus.COUNTDOWN.value),
-                                Pair("startTime", FieldValue.serverTimestamp())
-                            ),
-                            gameId
-                        )
+                    if (isCreator) {
+                        CustomButton(text = "Start Game") {
+                            vm.updateLobby(
+                                mapOf(
+                                    Pair("status", LobbyStatus.COUNTDOWN.value),
+                                    Pair("startTime", FieldValue.serverTimestamp())
+                                ),
+                                gameId
+                            )
+                        }
                     }
+
                 }
             }
 
@@ -355,17 +359,6 @@ fun DismissLobbyDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
         }
     )
 }
-
-@Composable
-fun QRCodeComponent(modifier: Modifier = Modifier, bitmap: Bitmap) {
-
-    Image(
-        bitmap = bitmap.asImageBitmap(),
-        contentDescription = "QR",
-        modifier = modifier.size(250.dp)
-    )
-}
-
 
 @Composable
 fun Participants(

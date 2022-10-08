@@ -21,6 +21,7 @@ import com.budiyev.android.codescanner.CodeScannerView
 import com.budiyev.android.codescanner.DecodeCallback
 import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
+import com.example.seekers.general.QRScanner
 
 @Composable
 fun QrScannerScreen(navController: NavHostController, nickname: String, avatarId: Int) {
@@ -69,30 +70,7 @@ fun QrScannerScreen(navController: NavHostController, nickname: String, avatarId
     }
 
     if (cameraIsAllowed) {
-        val scannerView = CodeScannerView(context)
-        val codeScanner = CodeScanner(context, scannerView)
-        codeScanner.camera = CodeScanner.CAMERA_BACK
-        codeScanner.formats = CodeScanner.ALL_FORMATS
-        codeScanner.autoFocusMode = AutoFocusMode.SAFE
-        codeScanner.scanMode = ScanMode.SINGLE
-        codeScanner.isAutoFocusEnabled = true
-        codeScanner.isFlashEnabled = false
-        codeScanner.decodeCallback = DecodeCallback {
-            codeScanner.stopPreview()
-            codeScanner.releaseResources()
-            gameId = it.text
-        }
-        codeScanner.errorCallback = ErrorCallback { // or ErrorCallback.SUPPRESS
-            Log.e("qrScanner", "QrScannerScreen: ", it)
-        }
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = {
-                val layout = FrameLayout(it)
-                layout.addView(scannerView)
-                codeScanner.startPreview()
-                layout
-            })
+        QRScanner(context = context, onScanned = { gameId = it })
     } else {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(text = "Need camera permission")

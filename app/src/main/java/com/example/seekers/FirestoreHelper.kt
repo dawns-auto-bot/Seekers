@@ -124,6 +124,17 @@ object FirestoreHelper {
             }
     }
 
+    fun updatePlayerInGameStatus(inGameStatus: Int, gameId: String, playerId: String) {
+        val playerRef = lobbiesRef.document(gameId).collection("players").document(playerId)
+        playerRef.update(mapOf(Pair("inGameStatus", inGameStatus)))
+            .addOnSuccessListener {
+                Log.d(TAG, "updatePlayerInGameStatus: $playerId status updated")
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "updatePlayerInGameStatus: ", it)
+            }
+    }
+
 }
 
 class Lobby(
