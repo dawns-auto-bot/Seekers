@@ -9,4 +9,5 @@ sealed class NavRoutes(val route: String) {
     object Scanner: NavRoutes("Scanner")
     object Countdown: NavRoutes("Countdown")
     object Heatmap: NavRoutes("Heatmap")
+    object CreateAccount : NavRoutes("CreateAccount")
 }

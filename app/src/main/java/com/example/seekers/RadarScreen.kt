@@ -26,11 +26,14 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.seekers.general.CustomButton
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -40,7 +43,6 @@ fun RadarScreen(
     gameId: String
 ) {
     val scope = rememberCoroutineScope()
-    val playersNearBy by vm.playersNearByCount.observeAsState()
     val playersInGame by vm.players.observeAsState(listOf())
     val scanning by vm.scanningStatus.observeAsState(0)
 
@@ -62,13 +64,18 @@ fun RadarScreen(
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
-        FoundPlayerList(playersAndDistance = playersInGame, vm = vm, gameId = gameId)
+        if (scanning == ScanningStatus.SCANNING.value) {
+            ScanningLottie()
+        } else {
+            FoundPlayerList(playersAndDistance = playersInGame, vm = vm, gameId = gameId)
+        }
         CustomButton(text = "Scan") {
             vm.updateScanStatus(ScanningStatus.SCANNING.value)
             scope.launch {
                 val gotPlayers = withContext(Dispatchers.IO) {
                     vm.getPlayers(gameId)
                 }
+                delay(5000)
                 if (gotPlayers) {
                     vm.updateScanStatus(ScanningStatus.SCANNING_STOPPED.value)
                 }
@@ -81,6 +88,12 @@ enum class ScanningStatus(val value: Int) {
     BEFORE_SCAN(0),
     SCANNING(1),
     SCANNING_STOPPED(2)
+}
+
+@Composable
+fun ScanningLottie() {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.scanning_nearby))
+    LottieAnimation(composition)
 }
 
 @Composable
@@ -109,7 +122,7 @@ fun FoundPlayerCard(
     distance: Float
 ) {
 
-    val avaratID = when (player.avatarId) {
+    val avatarID = when (player.avatarId) {
         0 -> R.drawable.bee
         1 -> R.drawable.chameleon
         2 -> R.drawable.chick
@@ -125,9 +138,9 @@ fun FoundPlayerCard(
     }
 
     val backgroundColor = when (player.distanceStatus) {
-        1 -> Color.Green
+        1 -> Color.Red
         2 -> Color.Yellow
-        3 -> Color.Red
+        3 -> Color.Green
         else -> Color.White
     }
 
@@ -147,7 +160,7 @@ fun FoundPlayerCard(
                     .align(Alignment.CenterStart)
             ) {
                 Image(
-                    painter = painterResource(id = avaratID),
+                    painter = painterResource(id = avatarID),
                     contentDescription = "avatar",
                     modifier = Modifier
                         .size(50.dp)
@@ -224,10 +237,6 @@ class RadarViewModel() : ViewModel() {
                 filterPlayersList(playerList)
             }
         return true
-    }
-
-    fun updatePlayerDistanceStatus(changeMap: Map<String, Any>, player: Player, gameId: String) {
-        firestore.updateInGamePlayerDistanceStatus(changeMap, player, gameId)
     }
 
 

@@ -49,6 +49,9 @@ android {
 
 dependencies {
 
+    def lottieVersion = "5.2.0"
+    implementation "com.airbnb.android:lottie-compose:$lottieVersion"
+
     implementation "androidx.compose.material:material-icons-extended:$compose_version"
 
     def nav_version = "2.5.2"

@@ -9,24 +9,25 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.github.g0dkar.qrcode.QRCode
@@ -44,28 +45,74 @@ fun generateQRCode(gameId: String): Bitmap {
 }
 
 fun getLocationPermission(context: Context) {
-    if ((ContextCompat.checkSelfPermission(context,
-            Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
-        ActivityCompat.requestPermissions(context as Activity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 0)
+    if ((ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) != PackageManager.PERMISSION_GRANTED)
+    ) {
+        ActivityCompat.requestPermissions(
+            context as Activity,
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            0
+        )
     }
 }
 
-fun getActivityRecognitionPermission(context: Context){
-    if(ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)==PackageManager.PERMISSION_DENIED){
+fun getActivityRecognitionPermission(context: Context) {
+    if (ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACTIVITY_RECOGNITION
+        ) == PackageManager.PERMISSION_DENIED
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ActivityCompat.requestPermissions(context as Activity, arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION), 1)
+            ActivityCompat.requestPermissions(
+                context as Activity,
+                arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION),
+                1
+            )
         }
     }
 }
 
 @Composable
+fun CustomOutlinedTextField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    focusManager: FocusManager,
+    label: String,
+    placeholder: String,
+    trailingIcon: @Composable() (() -> Unit)? = null,
+    keyboardType: KeyboardType,
+    passwordVisible: Boolean? = null
+) {
+    val width = LocalConfiguration.current.screenWidthDp * 0.8
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Done,
+            keyboardType = keyboardType
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = { focusManager.clearFocus() }),
+        label = { Text(text = label) },
+        placeholder = { Text(text = placeholder) },
+        visualTransformation = if (passwordVisible == true || passwordVisible == null) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = trailingIcon,
+        modifier = Modifier
+            .width(width.dp)
+    )
+}
+
+@Composable
 fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
+    val width = LocalConfiguration.current.screenWidthDp * 0.8
     Button(
         onClick = onClick,
         modifier = modifier
-            .width(250.dp)
+            .width(width.dp)
             .height(50.dp)
-            .clip(RoundedCornerShape(25.dp)),
+            .clip(RoundedCornerShape(10.dp)),
         colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.Black)
     ) {
         Text(text = text)
@@ -120,7 +167,7 @@ fun VerticalSlider(
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
     colors: SliderColors = SliderDefaults.colors()
-){
+) {
     Column() {
         // Text(text = value.toString(), fontSize = 10.sp)
         Slider(

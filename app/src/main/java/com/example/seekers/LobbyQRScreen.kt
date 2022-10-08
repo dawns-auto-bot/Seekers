@@ -56,6 +56,7 @@ fun LobbyQRScreen(
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
     var showEditRulesDialog by remember { mutableStateOf(false) }
+    var showQRDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -111,11 +112,7 @@ fun LobbyQRScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    if (showQR) {
-                        vm.updateQRImageVisibility(false)
-                    } else {
-                        vm.updateQRImageVisibility(true)
-                    }
+                    showQRDialog = true
                 }) {
                     Icon(Icons.Outlined.QrCode2, "QR", modifier = Modifier.size(40.dp))
                 }
@@ -141,10 +138,6 @@ fun LobbyQRScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (showQR) {
-                QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
-            }
-
             Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
             Participants(
                 Modifier
@@ -169,6 +162,12 @@ fun LobbyQRScreen(
                 }
             }
 
+        }
+        if (showQRDialog) {
+            QRDialog(
+                bitmap = bitmap,
+                onDismissRequest = { showQRDialog = false }
+            )
         }
         if (showEditRulesDialog) {
             EditRulesDialog(
@@ -354,6 +353,28 @@ fun DismissLobbyDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
             }
         }
     )
+}
+
+@Composable
+fun QRDialog(
+    bitmap: Bitmap,
+    onDismissRequest: () -> Unit
+) {
+    Dialog(onDismissRequest = { onDismissRequest() }) {
+        Surface(
+            color = Color.White,
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.padding(30.dp)
+            ) {
+                QRCodeComponent(bitmap = bitmap)
+            }
+
+        }
+
+    }
+
 }
 
 @Composable
