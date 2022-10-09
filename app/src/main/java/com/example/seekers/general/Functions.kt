@@ -8,6 +8,9 @@ import android.graphics.*
 import android.os.Build
 import android.util.Log
 import android.widget.FrameLayout
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.Image
@@ -28,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.budiyev.android.codescanner.AutoFocusMode
@@ -216,4 +220,28 @@ fun Bitmap.toGrayscale():Bitmap{
 
     Canvas(this).drawBitmap(this, 0f, 0f, paint)
     return this
+}
+
+@Composable
+fun getPermissionLauncher(onResult: (Boolean) -> Unit): ManagedActivityResultLauncher<String, Boolean> {
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = onResult
+    )
+}
+
+@Composable
+fun PermissionDialog(onDismiss: () -> Unit, onContinue: () -> Unit, title: String, text: String) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)) {
+            Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = title, style = MaterialTheme.typography.h6)
+                Text(text = text)
+                CustomButton(text = "Continue") {
+                    onContinue()
+                    onDismiss()
+                }
+            }
+        }
+    }
 }

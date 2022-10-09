@@ -3,9 +3,11 @@ package com.example.seekers
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ColorSpace
+import android.os.Build
 import android.os.CountDownTimer
 import android.os.Looper
 import android.util.Log
@@ -13,6 +15,7 @@ import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -54,6 +57,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.*
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @SuppressLint("MissingPermission")
 @Composable
 fun HeatMapScreen(
@@ -71,7 +75,7 @@ fun HeatMapScreen(
     var timer: CountDownTimer? by remember { mutableStateOf(null) }
     val timeRemaining by vm.timeRemaining.observeAsState()
     val center by vm.center.observeAsState()
-//    var center by remember { mutableStateOf(LatLng(60.22382613352466, 24.758245842202495)) }
+    val isSeeker by vm.isSeeker.observeAsState()
     val heatPositions by vm.heatPositions.observeAsState(listOf())
     val movingPlayers by vm.movingPlayers.observeAsState(listOf())
     val eliminatedPlayers by vm.eliminatedPlayers.observeAsState(listOf())
@@ -128,16 +132,24 @@ fun HeatMapScreen(
         if (!locationAllowed) {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         } else {
             locationAllowed = true
         }
     }
 
-    LaunchedEffect(locationAllowed) {
-        if (locationAllowed) {
-            vm.startLocationUpdatesForPlayer(FirestoreHelper.uid!!, gameId)
+    LaunchedEffect(isSeeker) {
+        println("isSeeker $isSeeker")
+        isSeeker?.let {
+            vm.startService(context = context, gameId = gameId, isSeeker = it)
         }
     }
+
+//    LaunchedEffect(locationAllowed) {
+//        if (locationAllowed) {
+//            vm.startLocationUpdatesForPlayer(FirestoreHelper.uid!!, gameId)
+//        }
+//    }
 
     LaunchedEffect(timeRemaining) {
         timeRemaining?.let {
@@ -160,7 +172,7 @@ fun HeatMapScreen(
 
     LaunchedEffect(eliminatedPlayers) {
         eliminatedPlayers.find { it.playerId == FirestoreHelper.uid!! }?.let {
-            vm.removeLocationUpdates()
+            vm.stopService(context)
         }
     }
 
@@ -195,6 +207,7 @@ fun HeatMapScreen(
                         ), it.radius
                     )
                 )
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(center!!, minZoom)
                 initialPosSet = true
                 launch(Dispatchers.Default) {
                     circleCoords = getCircleCoords(
@@ -212,7 +225,6 @@ fun HeatMapScreen(
     properties?.let { props ->
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (locationAllowed) {
-
                 HeatMap(
                     state = cameraPositionState,
                     center = center,
@@ -246,7 +258,7 @@ fun HeatMapScreen(
                 ) {
                     Button(onClick = {
                         vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
-                        vm.removeLocationUpdates()
+                        vm.stopService(context)
                         navController.navigate(NavRoutes.StartGame.route)
                     }) {
                         Text(text = "Leave")
@@ -326,9 +338,7 @@ fun HeatMap(
 ) {
     val context = LocalContext.current
     GoogleMap(
-        cameraPositionState = state.apply {
-            position = CameraPosition.fromLatLngZoom(center!!, minZoom)
-        },
+        cameraPositionState = state,
         properties = properties,
         uiSettings = uiSettings,
     ) {
@@ -540,7 +550,6 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     }
 
     val firestore = FirestoreHelper
-    val isSeeker = MutableLiveData<Boolean>()
     val lobby = MutableLiveData<Lobby>()
     val radius = Transformations.map(lobby) {
         it.radius
@@ -553,6 +562,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     }
     val timeRemaining = MutableLiveData<Int>()
     val players = MutableLiveData<List<Player>>()
+    val isSeeker = MutableLiveData<Boolean>()
     val playersWithoutSelf = Transformations.map(players) { players ->
         players.filter { it.playerId != FirestoreHelper.uid!! }
     }
@@ -668,6 +678,13 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
                 }
                 val playersFetched = data.toObjects(Player::class.java)
                 players.postValue(playersFetched)
+                if (isSeeker.value == null) {
+                    val myStatus = playersFetched.find { it.playerId == firestore.uid }?.inGameStatus
+                    myStatus?.let {
+                        isSeeker.value = (it == InGameStatus.SEEKER.value)
+                    }
+                }
+
             }
     }
 
@@ -717,33 +734,47 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 //        sendFoundNotification()
     }
 
-    private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
-    private lateinit var locationCallback2: LocationCallback
+//    private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
+//    private lateinit var locationCallback2: LocationCallback
 
-    @SuppressLint("MissingPermission")
-    fun startLocationUpdatesForPlayer(playerId: String, gameId: String) {
-        locationCallback2 = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                for (location in locationResult.locations) {
-                    val changeMap = mapOf(
-                        Pair("location", GeoPoint(location.latitude, location.longitude))
-                    )
-                    firestore.updatePlayerLocation(changeMap, playerId, gameId)
-                }
-            }
-        }
+//    @SuppressLint("MissingPermission")
+//    fun startLocationUpdatesForPlayer(playerId: String, gameId: String) {
+//        locationCallback2 = object : LocationCallback() {
+//            override fun onLocationResult(locationResult: LocationResult) {
+//                for (location in locationResult.locations) {
+//                    val changeMap = mapOf(
+//                        Pair("location", GeoPoint(location.latitude, location.longitude))
+//                    )
+//                    firestore.updatePlayerLocation(changeMap, playerId, gameId)
+//                }
+//            }
+//        }
+//
+//        fusedLocationClient.requestLocationUpdates(
+//            locationRequest,
+//            locationCallback2,
+//            Looper.getMainLooper()
+//        )
+//        Log.d("DEBUG", "started location updates 2")
+//    }
 
-        fusedLocationClient.requestLocationUpdates(
-            locationRequest,
-            locationCallback2,
-            Looper.getMainLooper()
+//    fun removeLocationUpdates() {
+//        fusedLocationClient.removeLocationUpdates(locationCallback2)
+//        Log.d("DEBUG", "removed location updates")
+//    }
+
+    fun startService(context: Context, gameId: String, isSeeker: Boolean) {
+        LocationService.start(
+            context = context,
+            gameId = gameId,
+            isSeeker = isSeeker
         )
-        Log.d("DEBUG", "started location updates 2")
     }
 
-    fun removeLocationUpdates() {
-        fusedLocationClient.removeLocationUpdates(locationCallback2)
-        Log.d("DEBUG", "removed location updates")
+    fun stopService(context: Context) {
+        LocationService.stop(
+            context = context,
+        )
     }
 }
 

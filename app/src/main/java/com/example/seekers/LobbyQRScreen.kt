@@ -1,6 +1,5 @@
 package com.example.seekers
 
-import android.graphics.Bitmap
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -21,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -47,20 +45,23 @@ fun LobbyQRScreen(
     navController: NavHostController,
     vm: LobbyViewModel = viewModel(),
     gameId: String,
+    sharedVM: SharedViewModel,
+    startLocService: () -> Unit,
 ) {
     val context = LocalContext.current
     val bitmap = generateQRCode(gameId)
     val players by vm.players.observeAsState(listOf())
     val lobby by vm.lobby.observeAsState()
-    val isCreator by vm.isCreator.observeAsState(false)
+    val isCreator by vm.isCreator.observeAsState()
     val showQR by vm.showQR.observeAsState(false)
+    val locService by sharedVM.locService.observeAsState()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
     var showEditRulesDialog by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch(Dispatchers.IO) {
+        startLocService()
+        launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
             vm.getLobby(gameId)
             vm.getPlayer(gameId, FirestoreHelper.uid!!)
@@ -71,7 +72,7 @@ fun LobbyQRScreen(
         lobby?.let {
             when (it.status) {
                 LobbyStatus.DELETED.value -> {
-                    if (!isCreator) {
+                    if (isCreator != true) {
                         Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
                             .show()
                     }
@@ -99,7 +100,6 @@ fun LobbyQRScreen(
         }
     }
 
-
     Scaffold(topBar = {
         TopAppBar(
             title = {
@@ -123,7 +123,7 @@ fun LobbyQRScreen(
             },
             actions = {
                 Button(onClick = {
-                    if (isCreator) {
+                    if (isCreator == true) {
                         showDismissDialog = true
                     } else {
                         showLeaveDialog = true
@@ -150,15 +150,15 @@ fun LobbyQRScreen(
             Participants(
                 Modifier
                     .weight(3f)
-                    .padding(horizontal = 15.dp), players, isCreator, vm, gameId
+                    .padding(horizontal = 15.dp), players, isCreator == true, vm, gameId
             )
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Column {
-                    CustomButton(text = "${if (isCreator) "Edit" else "Check"} Rules") {
+                    CustomButton(text = "${if (isCreator == true) "Edit" else "Check"} Rules") {
                         showEditRulesDialog = true
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    if (isCreator) {
+                    if (isCreator == true) {
                         CustomButton(text = "Start Game") {
                             vm.updateLobby(
                                 mapOf(
@@ -169,16 +169,14 @@ fun LobbyQRScreen(
                             )
                         }
                     }
-
                 }
             }
-
         }
         if (showEditRulesDialog) {
             EditRulesDialog(
                 vm,
                 gameId,
-                isCreator,
+                isCreator == true,
                 onDismissRequest = { showEditRulesDialog = false })
         }
         if (showLeaveDialog) {

@@ -1,10 +1,11 @@
 package com.example.seekers
 
+import android.content.*
 import android.content.ContentValues.TAG
+import android.os.Build
 
-import android.content.Intent
-import android.content.IntentSender
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -24,7 +25,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.seekers.general.getLocationPermission
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.FirebaseApp
@@ -37,6 +37,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -60,6 +61,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
 import com.example.seekers.general.CustomButton
 import kotlinx.coroutines.Dispatchers
 
@@ -67,11 +69,14 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var oneTapClient: SignInClient
     private lateinit var signInRequest: BeginSignInRequest
+    private lateinit var sharedVM: SharedViewModel
 
     private val REQ_ONE_TAP = 2  // Can be any integer unique to the Activity
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        sharedVM = ViewModelProvider(this)[SharedViewModel::class.java]
 
 
         //Google
@@ -109,23 +114,22 @@ class MainActivity : ComponentActivity() {
             .addOnFailureListener(this) { e ->
                 // No saved credentials found. Launch the One Tap sign-up flow, or
                 // do nothing and continue presenting the signed-out UI.
-                Log.d(TAG, e.localizedMessage)
+                e.localizedMessage?.let { Log.d(TAG, it) }
             }
 
-
         FirebaseApp.initializeApp(this)
-        getLocationPermission(this)
 
         setContent {
             SeekersTheme {
-                MyAppNavHost()
+                MyAppNavHost(startLocService = { }, sharedVM = sharedVM)
             }
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
-fun MyAppNavHost() {
+fun MyAppNavHost(startLocService: () -> Unit, sharedVM: SharedViewModel) {
 
     val navController = rememberNavController()
 
@@ -175,7 +179,13 @@ fun MyAppNavHost() {
             )
         ) {
             val gameId = it.arguments!!.getString("gameId")!!
-            LobbyQRScreen(navController = navController, gameId = gameId)
+//            startLocService()
+            LobbyQRScreen(
+                navController = navController,
+                gameId = gameId,
+                startLocService = startLocService,
+                sharedVM = sharedVM
+            )
         }
         //QR Scanner
         composable(NavRoutes.Scanner.route + "/{nickname}/{avatarId}",
@@ -333,8 +343,7 @@ fun MainScreen(navController: NavController) {
                 )
             }
 
-        }
-        else {
+        } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     strokeWidth = 5.dp,
@@ -476,7 +485,8 @@ class AuthenticationViewModel(auth: FirebaseAuth) : ViewModel() {
                 val lobby = it.toObject(Lobby::class.java)
                 lobby?.let { lobby ->
                     println("checkGameStatus " + lobby.status.toString())
-                    gameStatus.postValue(lobby.status) }
+                    gameStatus.postValue(lobby.status)
+                }
             }
     }
 }
