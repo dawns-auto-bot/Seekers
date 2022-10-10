@@ -1,8 +1,7 @@
 package com.example.seekers
 
+import android.graphics.Bitmap
 import android.util.Log
-import com.google.android.gms.tasks.Task
-import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.*
@@ -11,9 +10,11 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
+import java.io.ByteArrayOutputStream
 import java.io.Serializable
 
-object FirestoreHelper {
+object FirebaseHelper {
     val lobbiesRef = Firebase.firestore.collection("lobbies")
     val usersRef = Firebase.firestore.collection("users")
     val TAG = "firestoreHelper"
@@ -24,7 +25,6 @@ object FirestoreHelper {
         val lobbyWithId = lobby.apply {
             id = ref.id
         }
-
         ref
             .set(lobbyWithId)
             .addOnSuccessListener {
@@ -81,7 +81,11 @@ object FirestoreHelper {
     fun getUser(playerId: String): DocumentReference {
         return usersRef.document(playerId)
     }
-    
+
+    fun getUsers(): CollectionReference {
+        return usersRef
+    }
+
     fun addUser(map: HashMap<String, String>, uid: String) {
         usersRef.document(uid)
             .set(map)
@@ -92,7 +96,7 @@ object FirestoreHelper {
 
     fun updateUser(userId: String, changeMap: Map<String, Any>) {
         usersRef.document(userId)
-            .set(changeMap)
+            .update(changeMap)
             .addOnSuccessListener {
                 Log.d(TAG, "updateUser: $userId updated successfully")
             }
@@ -100,17 +104,6 @@ object FirestoreHelper {
 
     fun getPlayerStatus(gameId: String, playerId: String): DocumentReference {
         return lobbiesRef.document(gameId).collection("players").document(playerId)
-    }
-
-    fun updateInGamePlayerDistanceStatus(changeMap: Map<String, Any>,player: Player, gameId: String) {
-        val playerRef = lobbiesRef.document(gameId).collection("players").document(player.playerId)
-        playerRef.update(changeMap)
-            .addOnSuccessListener {
-                Log.d(TAG, "updateInGameDistanceStatus: ${player.playerId} distance updated")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "update: ", it)
-            }
     }
 
     fun updatePlayerLocation(changeMap: Map<String, Any>, playerId: String, gameId: String) {
@@ -135,6 +128,36 @@ object FirestoreHelper {
             }
     }
 
+    fun sendSelfie(playerId: String, gameId: String, selfie: Bitmap) {
+        val storageRef = Firebase.storage.reference.child("lobbies").child(gameId).child(playerId)
+        val baos = ByteArrayOutputStream()
+        selfie.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+        val bytes = baos.toByteArray()
+        storageRef.putBytes(bytes)
+            .addOnSuccessListener {
+                Log.d(TAG, "sendSelfie: picture uploaded ($playerId)")
+                val news = News(
+                    picId = playerId,
+                    text = "$playerId was caught!",
+                    timestamp = Timestamp.now()
+                )
+                addFoundNews(news = news, gameId)
+            }
+    }
+
+    fun addFoundNews(news: News, gameId: String) {
+        lobbiesRef.document(gameId).collection("news").document(news.picId)
+            .set(news)
+            .addOnSuccessListener {
+                Log.d(TAG, "addFoundNews: ${news.picId}")
+            }
+    }
+
+    fun getNews(gameId: String): Query {
+        return lobbiesRef.document(gameId).collection("news")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+    }
+
 }
 
 class Lobby(
@@ -156,6 +179,12 @@ class Player(
     val inGameStatus: Int = 0,
     var distanceStatus: Int = 0,
     val location: GeoPoint = GeoPoint(0.0, 0.0)
+) : Serializable
+
+class News(
+    val picId: String = "",
+    val text: String = "",
+    timestamp: Timestamp = Timestamp.now(),
 ) : Serializable
 
 enum class InLobbyStatus(val value: Int) {

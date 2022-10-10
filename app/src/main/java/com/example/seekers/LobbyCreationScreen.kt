@@ -5,6 +5,7 @@ import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.IconButton
 import android.app.Application
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -151,13 +152,13 @@ fun LobbyCreationScreen(
                         val player = Player(
                             nickname = nickname,
                             avatarId = avatarId,
-                            playerId = FirestoreHelper.uid!!,
+                            playerId = FirebaseHelper.uid!!,
                             inLobbyStatus = InLobbyStatus.CREATOR.value,
                             inGameStatus = InGameStatus.SEEKER.value
                         )
                         vm.addPlayer(player, gameId)
                         vm.updateUser(
-                            FirestoreHelper.uid!!,
+                            FirebaseHelper.uid!!,
                             mapOf(Pair("currentGameId", gameId))
                         )
                         navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
@@ -266,12 +267,25 @@ fun Input(
 }
 
 class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(application) {
-    val firestore = FirestoreHelper
+
+    val TAG = "LobbyVM"
+
+    // Firebase
+    val firestore = FirebaseHelper
+
+    // Players
     val maxPlayers = MutableLiveData<Int>()
+    val players = MutableLiveData(listOf<Player>())
+    val isCreator = MutableLiveData<Boolean>()
+
+    // Lobby
+    val lobby = MutableLiveData<Lobby>()
     val timeLimit = MutableLiveData<Int>()
     val countdown = MutableLiveData<Int>()
     val center: MutableLiveData<LatLng> = MutableLiveData<LatLng>(null)
     val radius = MutableLiveData(50)
+
+    // Map
     val showMap = MutableLiveData(false)
     val currentLocation = MutableLiveData<LatLng>()
     val client = LocationServices.getFusedLocationProviderClient(application)
@@ -283,32 +297,15 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
         }
     }
 
+    // Map functions
+
     fun updateCenter(location: LatLng) {
         center.value = location
-    }
-
-    fun updateMaxPlayers(newVal: Int?) {
-        maxPlayers.value = newVal
-    }
-
-    fun updateTimeLimit(newVal: Int?) {
-        timeLimit.value = newVal
     }
 
     fun updateRadius(newVal: Int) {
         radius.value = newVal
     }
-
-    fun updateCountdown(newVal: Int?) {
-        countdown.value = newVal
-    }
-
-    fun addLobby(lobby: Lobby) = firestore.addLobby(lobby)
-
-    fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
-
-    fun updateUser(userId: String, changeMap: Map<String, Any>) =
-        firestore.updateUser(userId, changeMap)
 
     fun updateShowMap(newVal: Boolean) {
         showMap.value = newVal
@@ -324,4 +321,67 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
     fun removeLocationUpdates() {
         LocationHelper.removeLocationUpdates(client, locationCallback)
     }
+
+    // Player functions
+
+    fun addPlayer(player: Player, gameId: String) = firestore.addPlayer(player, gameId)
+
+    fun removePlayer(gameId: String, playerId: String) =
+        firestore.removePlayer(gameId = gameId, playerId = playerId)
+
+    fun getPlayers(gameId: String) {
+        firestore.getPlayers(gameId)
+            .addSnapshotListener { list, e ->
+                list ?: run {
+                    Log.e(TAG, "getPlayers: ", e)
+                    return@addSnapshotListener
+                }
+                val playerList = list.toObjects(Player::class.java)
+                players.postValue(playerList)
+            }
+    }
+
+    fun getPlayer(gameId: String, playerId: String) {
+        firestore.getPlayer(gameId, playerId).get()
+            .addOnSuccessListener { data ->
+                val player = data.toObject(Player::class.java)
+                player?.let {
+                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.value)
+                }
+            }
+            .addOnFailureListener {
+                Log.e(TAG, "getPlayer: ", it)
+            }
+    }
+
+    fun updateUser(userId: String, changeMap: Map<String, Any>) =
+        firestore.updateUser(userId, changeMap)
+
+    fun updateMaxPlayers(newVal: Int?) {
+        maxPlayers.value = newVal
+    }
+
+    // Lobby functions
+
+    fun addLobby(lobby: Lobby) = firestore.addLobby(lobby)
+
+    fun getLobby(gameId: String) {
+        firestore.getLobby(gameId).addSnapshotListener { data, e ->
+            data?.let {
+                lobby.postValue(it.toObject(Lobby::class.java))
+            }
+        }
+    }
+
+    fun updateLobby(changeMap: Map<String, Any>, gameId: String) =
+        firestore.updateLobby(changeMap, gameId)
+
+    fun updateTimeLimit(newVal: Int?) {
+        timeLimit.value = newVal
+    }
+
+    fun updateCountdown(newVal: Int?) {
+        countdown.value = newVal
+    }
+
 }

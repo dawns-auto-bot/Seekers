@@ -6,6 +6,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -15,6 +16,9 @@ import com.example.seekers.general.LogOutButton
 import com.example.seekers.ui.theme.Ivory
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun StartGameScreen(navController: NavController) {
@@ -45,6 +49,7 @@ fun StartGameScreen(navController: NavController) {
             ) {
                 LogOutButton(text = "Log out") {
                     Firebase.auth.signOut()
+                    println("logged user: ${Firebase.auth.currentUser}")
                     navController.navigate(NavRoutes.MainScreen.route)
                 }
             }

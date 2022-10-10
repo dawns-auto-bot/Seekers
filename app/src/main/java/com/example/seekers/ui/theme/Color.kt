@@ -17,3 +17,4 @@ val BrightRed = Color(0xFF96031A)
 val Ivory = Color(0xFFFCFFFC)
 val Raisin = Color(0xFF2d2a32)
 
+val emailAvailable = Color(0xFF228B22)

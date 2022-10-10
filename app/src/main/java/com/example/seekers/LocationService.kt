@@ -7,7 +7,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.location.Location
-import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
@@ -25,7 +24,8 @@ import kotlinx.coroutines.launch
 class LocationService : Service() {
     companion object {
         const val TAG = "LOCATION_SERVICE"
-        var hasBeenSent = false
+        var seekerNearbySent = false
+        var outOfBoundsSent = false
         fun start(context: Context, gameId: String, isSeeker: Boolean) {
             val startIntent = Intent(context, LocationService::class.java)
             startIntent.putExtra("gameId", gameId)
@@ -37,8 +37,9 @@ class LocationService : Service() {
             context.stopService(stopIntent)
         }
     }
-    private val firestore = FirestoreHelper
+    private val firestore = FirebaseHelper
     private val SEEKER_NOTIFICATION = "SEEKER_NOTIFICATION"
+    private val BOUNDS_NOTIFICATION = "BOUNDS_NOTIFICATION"
     var listenerReg: ListenerRegistration? = null
     var previousLoc: Location? = null
     var callback: LocationCallback? = null
@@ -60,10 +61,17 @@ class LocationService : Service() {
                     }
                     if (!isSeeker) {
                         scope.launch {
-                            if (!hasBeenSent) {
+                            if (!seekerNearbySent) {
                                 checkDistanceToSeeker(curLoc, gameId)
                                 delay(30 * 1000)
-                                hasBeenSent = false
+                                seekerNearbySent = false
+                            }
+                        }
+                        scope.launch {
+                            if (!outOfBoundsSent) {
+                                checkOutOfBounds(gameId, curLoc)
+                                delay(30 * 1000)
+                                outOfBoundsSent = false
                             }
                         }
                     }
@@ -139,8 +147,30 @@ class LocationService : Service() {
                 )
                 val distance = results[0]
                 if (distance < 20f) {
-                    hasBeenSent = true
+                    seekerNearbySent = true
                     sendSeekerNearbyNotification()
+                }
+            }
+    }
+
+    fun checkOutOfBounds(gameId: String, curLoc: Location) {
+        firestore.getLobby(gameId).get()
+            .addOnSuccessListener {
+                val lobby = it.toObject(Lobby::class.java)
+                lobby?.let { lob ->
+                    val results = FloatArray(1)
+                    Location.distanceBetween(
+                        lob.center.latitude,
+                        lob.center.longitude,
+                        curLoc.latitude,
+                        curLoc.longitude,
+                        results
+                    )
+                    val distanceToCenter = results[0]
+                    if (distanceToCenter > lob.radius) {
+                        outOfBoundsSent = true
+                        sendOutOfBoundsNotification()
+                    }
                 }
             }
     }
@@ -205,6 +235,22 @@ class LocationService : Service() {
         )
         with(NotificationManagerCompat.from(applicationContext)) {
             notify(3, notification)
+        }
+    }
+
+    private fun sendOutOfBoundsNotification() {
+        val notification = Notifications.createNotification(
+            context = applicationContext,
+            title = "Out of bounds!",
+            content = "Return to the playing area ASAP!",
+            channelId = BOUNDS_NOTIFICATION,
+            priority = NotificationManager.IMPORTANCE_HIGH,
+            category = Notification.CATEGORY_EVENT,
+            pendingIntent = getPendingIntent(),
+            autoCancel = true
+        )
+        with(NotificationManagerCompat.from(applicationContext)) {
+            notify(4, notification)
         }
     }
 

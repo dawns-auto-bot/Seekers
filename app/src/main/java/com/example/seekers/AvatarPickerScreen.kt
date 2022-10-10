@@ -13,8 +13,10 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,10 +27,11 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.ui.theme.Ivory
 import com.example.seekers.ui.theme.avatarBackground
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun AvatarPickerScreen(
     vm: AvatarViewModel = viewModel(),
@@ -38,6 +41,7 @@ fun AvatarPickerScreen(
 
     val avatarId by vm.avatarId.observeAsState(R.drawable.avatar_empty)
     val nickname by vm.nickname.observeAsState("")
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val sheetState = rememberModalBottomSheetState(
         initialValue = ModalBottomSheetValue.Hidden,
@@ -62,7 +66,9 @@ fun AvatarPickerScreen(
         modifier = Modifier.fillMaxSize().background(color = Ivory)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 64.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 64.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -74,6 +80,7 @@ fun AvatarPickerScreen(
                 backgroundColor = avatarBackground,
                 modifier = Modifier
                     .clickable {
+                        keyboardController?.hide()
                         coroutineScope.launch {
                             sheetState.show()
                         }
@@ -92,10 +99,10 @@ fun AvatarPickerScreen(
                 title = "Nickname",
                 value = nickname,
                 onChangeValue = {
-                vm.nickname.value = it
-            })
+                    vm.nickname.value = it
+                })
             Spacer(modifier = Modifier.height(32.dp))
-            CustomButton(text = if (isCreator)"Continue" else "Join lobby") {
+            CustomButton(text = if (isCreator) "Continue" else "Join lobby") {
                 val avatarIndex = avatarList.indexOf(avatarId)
                 if (!isCreator) {
                     navController.navigate(NavRoutes.Scanner.route + "/$nickname/$avatarIndex")
@@ -105,7 +112,6 @@ fun AvatarPickerScreen(
             }
         }
     }
-
 }
 
 var avatarList = listOf(
@@ -161,5 +167,5 @@ fun BottomSheet(onPick: (Int) -> Unit) {
 class AvatarViewModel() : ViewModel() {
     val avatarId = MutableLiveData<Int>(R.drawable.avatar_empty)
     val nickname = MutableLiveData("")
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
 }

@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -24,18 +26,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.budiyev.android.codescanner.*
+import com.example.seekers.ui.theme.emailAvailable
 import com.budiyev.android.codescanner.AutoFocusMode
 import com.budiyev.android.codescanner.CodeScanner
 import com.budiyev.android.codescanner.CodeScannerView
@@ -60,18 +67,92 @@ fun generateQRCode(data: String): Bitmap {
 }
 
 fun getLocationPermission(context: Context) {
-    if ((ContextCompat.checkSelfPermission(context,
-            Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) {
-        ActivityCompat.requestPermissions(context as Activity, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 0)
+    if ((ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) != PackageManager.PERMISSION_GRANTED)
+    ) {
+        ActivityCompat.requestPermissions(
+            context as Activity,
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            0
+        )
     }
 }
 
-fun getActivityRecognitionPermission(context: Context){
-    if(ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION)==PackageManager.PERMISSION_DENIED){
+fun getActivityRecognitionPermission(context: Context) {
+    if (ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACTIVITY_RECOGNITION
+        ) == PackageManager.PERMISSION_DENIED
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ActivityCompat.requestPermissions(context as Activity, arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION), 1)
+            ActivityCompat.requestPermissions(
+                context as Activity,
+                arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION),
+                1
+            )
         }
     }
+}
+
+
+@Composable
+fun CustomOutlinedTextField(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    focusManager: FocusManager,
+    label: String,
+    placeholder: String,
+    trailingIcon: @Composable() (() -> Unit)? = null,
+    keyboardType: KeyboardType,
+    passwordVisible: Boolean? = null,
+    isError: Boolean = false,
+    emailIsAvailable: Boolean? = null,
+    modifier: Modifier? = null
+) {
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        isError = isError,
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            errorBorderColor = Color.Red,
+            errorLabelColor = Color.Red,
+            errorCursorColor = Color.Red,
+            errorLeadingIconColor = Color.Red,
+            errorTrailingIconColor = Color.Red,
+            focusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            focusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            unfocusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            unfocusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            trailingIconColor = if (emailIsAvailable == true) emailAvailable else Color.Gray
+        ),
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Done,
+            keyboardType = keyboardType
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = { focusManager.clearFocus() }),
+        label = { Text(text = label) },
+        placeholder = { Text(text = placeholder) },
+        visualTransformation = if (passwordVisible == true || passwordVisible == null) VisualTransformation.None else PasswordVisualTransformation(),
+        trailingIcon = trailingIcon,
+        modifier = modifier ?: Modifier
+    )
+}
+
+fun isEmailValid(email: String) :Boolean {
+    val EMAIL_REGEX = "^[A-Za-z](.*)([@]{1})(.{1,})(\\.)(.{1,})"
+    val result = EMAIL_REGEX.toRegex().matches(email)
+    Log.d("validation", result.toString())
+    return result
+}
+fun isPasswordValid(password: String) :Boolean {
+    val PASSWORD_REGEX = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$"
+    val result = PASSWORD_REGEX.toRegex().matches(password)
+    Log.d("validation", result.toString())
+    return result
 }
 
 @Composable
@@ -104,11 +185,12 @@ fun QRScanner(context: Context, onScanned: (String) -> Unit) {
 
 @Composable
 fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
+    val width = LocalConfiguration.current.screenWidthDp * 0.8
     Button(
         border = BorderStroke(1.dp, Raisin),
         onClick = onClick,
         modifier = modifier
-            .width(250.dp)
+            .width(width.dp)
             .height(50.dp),
         shape = RoundedCornerShape(15),
         colors = ButtonDefaults.outlinedButtonColors(TurquoiseGreen, contentColor = Raisin)
@@ -145,7 +227,7 @@ fun IconButton(
         onClick = onClick,
         modifier = modifier
             .height(50.dp)
-            .clip(RoundedCornerShape(25.dp)),
+            .clip(RoundedCornerShape(5.dp)),
         colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Color.White),
     ) {
         Box(
@@ -181,7 +263,7 @@ fun VerticalSlider(
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null,
     colors: SliderColors = SliderDefaults.colors()
-){
+) {
     Column() {
         // Text(text = value.toString(), fontSize = 10.sp)
         Slider(
