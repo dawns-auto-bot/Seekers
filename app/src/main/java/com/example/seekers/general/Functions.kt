@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.*
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.seekers.ui.theme.emailAvailable
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 
@@ -74,6 +76,7 @@ fun getActivityRecognitionPermission(context: Context) {
     }
 }
 
+
 @Composable
 fun CustomOutlinedTextField(
     value: TextFieldValue,
@@ -83,12 +86,28 @@ fun CustomOutlinedTextField(
     placeholder: String,
     trailingIcon: @Composable() (() -> Unit)? = null,
     keyboardType: KeyboardType,
-    passwordVisible: Boolean? = null
+    passwordVisible: Boolean? = null,
+    isError: Boolean = false,
+    emailIsAvailable: Boolean? = null,
+    modifier: Modifier? = null
 ) {
-    val width = LocalConfiguration.current.screenWidthDp * 0.8
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
+        isError = isError,
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            errorBorderColor = Color.Red,
+            errorLabelColor = Color.Red,
+            errorCursorColor = Color.Red,
+            errorLeadingIconColor = Color.Red,
+            errorTrailingIconColor = Color.Red,
+            focusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            focusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            unfocusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            unfocusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
+            trailingIconColor = if (emailIsAvailable == true) emailAvailable else Color.Gray
+        ),
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Done,
             keyboardType = keyboardType
@@ -99,9 +118,21 @@ fun CustomOutlinedTextField(
         placeholder = { Text(text = placeholder) },
         visualTransformation = if (passwordVisible == true || passwordVisible == null) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = trailingIcon,
-        modifier = Modifier
-            .width(width.dp)
+        modifier = modifier ?: Modifier
     )
+}
+
+fun isEmailValid(email: String) :Boolean {
+    val EMAIL_REGEX = "^[A-Za-z](.*)([@]{1})(.{1,})(\\.)(.{1,})"
+    val result = EMAIL_REGEX.toRegex().matches(email)
+    Log.d("validation", result.toString())
+    return result
+}
+fun isPasswordValid(password: String) :Boolean {
+    val PASSWORD_REGEX = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$"
+    val result = PASSWORD_REGEX.toRegex().matches(password)
+    Log.d("validation", result.toString())
+    return result
 }
 
 @Composable

@@ -27,7 +27,6 @@ import com.example.seekers.general.getLocationPermission
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.AuthResult
@@ -48,9 +47,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.seekers.general.isEmailValid
+import com.example.seekers.general.isPasswordValid
 import kotlinx.coroutines.Dispatchers
 
 class MainActivity : ComponentActivity() {
@@ -307,8 +306,7 @@ fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavCont
                 token = token,
                 launcher = launcher
             )
-        }
-        else {
+        } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     strokeWidth = 5.dp,
@@ -326,9 +324,39 @@ class AuthenticationViewModel() : ViewModel() {
     var fireBaseAuth = Firebase.auth
     var user = MutableLiveData<FirebaseUser>(null)
     var userIsInUsers = MutableLiveData<Boolean>()
+    var emailValidationError = MutableLiveData<Boolean>()
+    var emailIsAvailable = MutableLiveData<Boolean>()
+    var passwordValidationError = MutableLiveData<Boolean>()
     var firestore = FirestoreHelper
     val currentGameId = MutableLiveData<String>()
     val gameStatus = MutableLiveData<Int>()
+
+//    fun validateEmailAndPassword(email: String, password: String) {
+//        if (!isEmailValid(email)) {
+//            emailValidationError.postValue(true)
+//        } else
+//            emailValidationError.postValue(false)
+//        if (!isPasswordValid(password)) {
+//            passwordValidationError.postValue(true)
+//        } else {
+//            passwordValidationError.postValue(false)
+//        }
+//    }
+
+    fun validateEmail(email: String) {
+        if (!isEmailValid(email)) {
+            emailValidationError.postValue(true)
+        } else
+            emailValidationError.postValue(false)
+    }
+
+    fun validatePassword(password: String) {
+        if (!isPasswordValid(password)) {
+            passwordValidationError.postValue(true)
+        } else {
+            passwordValidationError.postValue(false)
+        }
+    }
 
     fun updateUserDoc(userId: String, changeMap: Map<String, Any>) =
         firestore.updateUser(userId, changeMap)
@@ -370,7 +398,8 @@ class AuthenticationViewModel() : ViewModel() {
                 val lobby = it.toObject(Lobby::class.java)
                 lobby?.let { lobby ->
                     println("checkGameStatus " + lobby.status.toString())
-                    gameStatus.postValue(lobby.status) }
+                    gameStatus.postValue(lobby.status)
+                }
             }
     }
 }

@@ -2,18 +2,19 @@ package com.example.seekers
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,16 +25,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.CustomOutlinedTextField
+import com.example.seekers.general.isEmailValid
+import com.example.seekers.general.isPasswordValid
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.launch
 
 @Composable
 fun LoginForm(
@@ -42,11 +44,16 @@ fun LoginForm(
     token: String,
     launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) {
+    // Email
     var email by remember { mutableStateOf(TextFieldValue("")) }
+
+    // Password
     var password by remember { mutableStateOf(TextFieldValue("")) }
     var passwordVisible by remember { mutableStateOf(false) }
+
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+    val width = LocalConfiguration.current.screenWidthDp * 0.8
 
     Column(
         verticalArrangement = Arrangement.Center,
@@ -64,6 +71,7 @@ fun LoginForm(
             label = "Email",
             placeholder = "Email",
             keyboardType = KeyboardType.Email,
+            modifier = Modifier.width(width.dp)
         )
         Spacer(modifier = Modifier.height(10.dp))
         CustomOutlinedTextField(
@@ -85,7 +93,8 @@ fun LoginForm(
                 }
             },
             keyboardType = KeyboardType.Password,
-            passwordVisible = passwordVisible
+            passwordVisible = passwordVisible,
+            modifier = Modifier.width(width.dp)
         )
         Spacer(modifier = Modifier.height(20.dp))
         Row(
