@@ -2,8 +2,6 @@ package com.example.seekers
 
 import android.graphics.Bitmap
 import android.util.Log
-import com.google.android.gms.tasks.Task
-import com.google.firebase.FirebaseApp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.*
@@ -82,6 +80,10 @@ object FirebaseHelper {
 
     fun getUser(playerId: String): DocumentReference {
         return usersRef.document(playerId)
+    }
+
+    fun getUsers(): CollectionReference {
+        return usersRef
     }
 
     fun addUser(map: HashMap<String, String>, uid: String) {

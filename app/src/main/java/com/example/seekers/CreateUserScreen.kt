@@ -16,6 +16,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -79,12 +80,18 @@ fun CreateUserForm(
         Spacer(modifier = Modifier.height(40.dp))
         CustomOutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                model.emailIsAvailable.value = null
+                email = it
+                if (email.text.isNotBlank()) {
+                    model.validateEmail(email.text)
+                }
+            },
             focusManager = focusManager,
             label = "Email",
             placeholder = "Email",
             trailingIcon = {
-                if (emailIsAvailable == true) {
+                if (emailIsAvailable == true && emailError == false) {
                     val image = Icons.Filled.TaskAlt
                     val description = "Email available"
                     Icon(image, description)
@@ -98,27 +105,12 @@ fun CreateUserForm(
             modifier = Modifier
                 .width(width.dp)
                 .onFocusChanged {
-                    if (!it.isFocused && email.text != "") {
-                        model.validateEmail(email.text)
-                    }
                     if (!it.isFocused && emailError == false && email.text != "") {
-                        model.fireBaseAuth
-                            .fetchSignInMethodsForEmail(email.text)
-                            .addOnCompleteListener() { result ->
-                                if (result.result.signInMethods?.size == 0) {
-                                    model.emailIsAvailable.postValue(true)
-                                } else {
-                                    model.emailIsAvailable.postValue(false)
-                                    model.emailValidationError.postValue(true)
-                                }
-                            }
-                            .addOnFailureListener {
-                                Log.d("validation", "not there")
-                            }
+                        model.checkEmailAvailability(email.text)
                     }
                 }
         )
-        if(emailError == true) {
+        if (emailError == true) {
             Card(
                 modifier = Modifier
                     .width(width.dp)
@@ -128,10 +120,11 @@ fun CreateUserForm(
             ) {
                 ValidationErrorRow(
                     text = if (emailIsAvailable == false) "Email already in use"
-                    else "Please provide an email address")
+                    else "Please provide a valid email address"
+                )
             }
         }
-        if (emailIsAvailable == true) {
+        if (emailIsAvailable == true && emailError == false) {
             Card(
                 modifier = Modifier
                     .width(width.dp)
@@ -178,7 +171,10 @@ fun CreateUserForm(
                 elevation = 0.dp
             ) {
                 Column(modifier = Modifier.padding(10.dp)) {
-                    ValidationErrorRow(text = "Password requires at least:", fontWeight = FontWeight.Bold)
+                    ValidationErrorRow(
+                        text = "Password requires at least:",
+                        fontWeight = FontWeight.Bold
+                    )
                     ValidationErrorRow(text = "\u2022 Minimum 8 characters long")
                     ValidationErrorRow(text = "\u2022 1 Capital letter")
                     ValidationErrorRow(text = "\u2022 1 Number")
@@ -192,22 +188,22 @@ fun CreateUserForm(
         ) {
             CustomButton(
                 onClick = {
-                    if(password.text != "" && email.text != "" && (passwordError == true || passwordError == null)  ) {
-                        model.validatePassword(password.text)
-                    }
-                    if(emailError == false && passwordError == false && email.text != "" && password.text != "") {
-                        Toast.makeText(
-                            context,
-                            "Validation succeeded",
-                            Toast.LENGTH_LONG
-                        ).show()
-//                        auth.createUserWithEmailAndPassword(
-//                            email.text,
-//                            password.text
-//                        )
-//                            .addOnCompleteListener() {
-//                                navController.navigate(NavRoutes.MainScreen.route)
-//                            }
+                    if (password.text != "" && email.text != "" && passwordError != false) {
+                        val validated = model.validatePassword(password.text)
+                        if (validated) {
+                            Toast.makeText(
+                                context,
+                                "Validation succeeded",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            auth.createUserWithEmailAndPassword(
+                                email.text,
+                                password.text
+                            )
+                                .addOnCompleteListener() {
+                                    navController.navigate(NavRoutes.MainScreen.route)
+                                }
+                        }
                     }
                 }, text = "Create account"
             )

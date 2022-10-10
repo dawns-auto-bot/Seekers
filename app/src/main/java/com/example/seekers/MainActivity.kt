@@ -47,15 +47,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.TextFieldValue
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModelProvider
-import com.example.seekers.general.CustomButton
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.seekers.general.isEmailValid
 import com.example.seekers.general.isPasswordValid
@@ -266,11 +257,13 @@ fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavCont
 
     LaunchedEffect(userIsInUsers) {
         userIsInUsers?.let {
+            println("inuser: $it")
             if (it) {
                 vm.checkCurrentGame(loggedInUser!!.uid)
             } else {
                 val changeMap = mapOf(
-                    Pair("currentGameId", "")
+                    Pair("currentGameId", ""),
+                    Pair("email", loggedInUser!!.email!!)
                 )
                 vm.updateUserDoc(loggedInUser!!.uid, changeMap)
                 navController.navigate(NavRoutes.StartGame.route)
@@ -343,18 +336,6 @@ class AuthenticationViewModel() : ViewModel() {
     val currentGameId = MutableLiveData<String>()
     val gameStatus = MutableLiveData<Int>()
 
-//    fun validateEmailAndPassword(email: String, password: String) {
-//        if (!isEmailValid(email)) {
-//            emailValidationError.postValue(true)
-//        } else
-//            emailValidationError.postValue(false)
-//        if (!isPasswordValid(password)) {
-//            passwordValidationError.postValue(true)
-//        } else {
-//            passwordValidationError.postValue(false)
-//        }
-//    }
-
     fun validateEmail(email: String) {
         if (!isEmailValid(email)) {
             emailValidationError.postValue(true)
@@ -362,11 +343,13 @@ class AuthenticationViewModel() : ViewModel() {
             emailValidationError.postValue(false)
     }
 
-    fun validatePassword(password: String) {
-        if (!isPasswordValid(password)) {
+    fun validatePassword(password: String) : Boolean {
+        return if (!isPasswordValid(password)) {
             passwordValidationError.postValue(true)
+            false
         } else {
             passwordValidationError.postValue(false)
+            true
         }
     }
 
@@ -375,6 +358,17 @@ class AuthenticationViewModel() : ViewModel() {
 
     fun setUser(firebaseUser: FirebaseUser?) {
         user.value = firebaseUser
+    }
+
+    fun checkEmailAvailability(email: String) {
+        firestore.getUsers().whereEqualTo("email", email).get().addOnSuccessListener { result ->
+            if (result.documents.size == 0) {
+                emailIsAvailable.value = true
+            } else {
+                emailIsAvailable.value = false
+                emailValidationError.value = true
+            }
+        }
     }
 
     fun logOut() {
