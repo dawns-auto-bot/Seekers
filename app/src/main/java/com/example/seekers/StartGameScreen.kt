@@ -36,6 +36,7 @@ fun StartGameScreen(navController: NavController) {
                     navController.navigate(NavRoutes.AvatarPicker.route + "/false")
                 }
             }
+            Text(text = "${FirebaseHelper.uid}", modifier = Modifier.align(Alignment.BottomCenter).padding(32.dp))
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
