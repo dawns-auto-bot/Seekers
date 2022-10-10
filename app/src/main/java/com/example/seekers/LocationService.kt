@@ -24,6 +24,9 @@ import kotlinx.coroutines.launch
 class LocationService : Service() {
     companion object {
         const val TAG = "LOCATION_SERVICE"
+        const val SEEKER_NOTIFICATION = "SEEKER_NOTIFICATION"
+        const val BOUNDS_NOTIFICATION = "BOUNDS_NOTIFICATION"
+        const val FOUND_NOTIFICATION = "FOUND_NOTIFICATION"
         var seekerNearbySent = false
         var outOfBoundsSent = false
         fun start(context: Context, gameId: String, isSeeker: Boolean) {
@@ -38,13 +41,12 @@ class LocationService : Service() {
         }
     }
     private val firestore = FirebaseHelper
-    private val SEEKER_NOTIFICATION = "SEEKER_NOTIFICATION"
-    private val BOUNDS_NOTIFICATION = "BOUNDS_NOTIFICATION"
     var listenerReg: ListenerRegistration? = null
     var previousLoc: Location? = null
     var callback: LocationCallback? = null
     var isTracking = false
     val scope = CoroutineScope(Dispatchers.IO)
+    var newsCount = 0
 
     override fun onBind(p0: Intent?): IBinder? {
         return null
@@ -62,7 +64,7 @@ class LocationService : Service() {
                     if (!isSeeker) {
                         scope.launch {
                             if (!seekerNearbySent) {
-                                checkDistanceToSeeker(curLoc, gameId)
+                                checkDistanceToSeekers(curLoc, gameId)
                                 delay(30 * 1000)
                                 seekerNearbySent = false
                             }
@@ -87,7 +89,7 @@ class LocationService : Service() {
             previousLoc = curLoc
             Log.d(TAG, "updateLoc: $curLoc")
             Log.d(TAG, "updateLoc: $isSeeker")
-            firestore.updatePlayerLocation(
+            firestore.updatePlayer(
                 mapOf(
                     Pair(
                         "location",
@@ -102,7 +104,7 @@ class LocationService : Service() {
         val distanceToPrev = prevLoc.distanceTo(curLoc)
         if (distanceToPrev > 10f) {
             Log.d(TAG, "updateLoc: sent location")
-            firestore.updatePlayerLocation(
+            firestore.updatePlayer(
                 mapOf(
                     Pair(
                         "location",
@@ -131,24 +133,28 @@ class LocationService : Service() {
         }
     }
 
-    fun checkDistanceToSeeker(ownLocation: Location, gameId: String) {
+    fun checkDistanceToSeekers(ownLocation: Location, gameId: String) {
         firestore.getPlayers(gameId)
             .whereEqualTo("inGameStatus", InGameStatus.SEEKER.value)
             .get()
             .addOnSuccessListener {
-                val seeker = it.toObjects(Player::class.java)[0]
-                val results = FloatArray(1)
-                Location.distanceBetween(
-                    seeker.location.latitude,
-                    seeker.location.longitude,
-                    ownLocation.latitude,
-                    ownLocation.longitude,
-                    results
-                )
-                val distance = results[0]
-                if (distance < 20f) {
+                val seekers = it.toObjects(Player::class.java)
+                val distances = seekers.map { player ->
+                    val results = FloatArray(1)
+                    Location.distanceBetween(
+                        player.location.latitude,
+                        player.location.longitude,
+                        ownLocation.latitude,
+                        ownLocation.longitude,
+                        results
+                    )
+                    results[0]
+                }
+                val proximityCriteria = 20f
+                val numOfSeekersNearby = distances.filter { dist -> dist <= proximityCriteria }.size
+                if (numOfSeekersNearby > 0) {
                     seekerNearbySent = true
-                    sendSeekerNearbyNotification()
+                    sendSeekerNearbyNotification(num = numOfSeekersNearby)
                 }
             }
     }
@@ -222,11 +228,12 @@ class LocationService : Service() {
         PendingIntent.FLAG_IMMUTABLE
     )
 
-    private fun sendSeekerNearbyNotification() {
+    private fun sendSeekerNearbyNotification(num: Int) {
+        val text = if (num == 1) "A seeker is nearby" else "There are $num seekers nearby"
         val notification = Notifications.createNotification(
             context = applicationContext,
             title = "Watch out!",
-            content = "A seeker is nearby",
+            content = text,
             channelId = SEEKER_NOTIFICATION,
             priority = NotificationManager.IMPORTANCE_HIGH,
             category = Notification.CATEGORY_EVENT,
@@ -254,14 +261,56 @@ class LocationService : Service() {
         }
     }
 
+    private fun sendNewsNotification(content: String) {
+        val notification = Notifications.createNotification(
+            context = applicationContext,
+            title = "Player found!",
+            content = content,
+            channelId = FOUND_NOTIFICATION,
+            priority = NotificationManager.IMPORTANCE_HIGH,
+            category = Notification.CATEGORY_EVENT,
+            pendingIntent = getPendingIntent(),
+            autoCancel = true
+        )
+        with(NotificationManagerCompat.from(applicationContext)) {
+            notify(5, notification)
+        }
+    }
+
+    fun listenForNews(gameId: String) {
+        FirebaseHelper.getNews(gameId)
+            .addSnapshotListener { data, e ->
+                Log.d(TAG, "listenForNews: player found ${data?.size()}")
+                data ?: kotlin.run {
+                    Log.e(TAG, "listenForNews: ", e)
+                    return@addSnapshotListener
+                }
+                val newsList = data.toObjects(News::class.java)
+                if (newsList.size > newsCount) {
+                    Log.d(TAG, "listenForNews: send notif")
+                    val latestNews = newsList[0]
+                    sendNewsNotification(latestNews.text)
+                    newsCount = newsList.size
+                }
+            }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand: service started")
-        val gameId = intent?.getStringExtra("gameId")
-        val isSeeker = intent?.getBooleanExtra("isSeeker", false)
+        val gameId = intent?.getStringExtra("gameId")!!
+        val isSeeker = intent.getBooleanExtra("isSeeker", false)
+        scope.launch {
+            listenForNews(gameId)
+        }
         Log.d(TAG, "onStartCommand: $gameId $isSeeker")
         Notifications.createNotificationChannel(
             context = applicationContext,
             SEEKER_NOTIFICATION,
+            importanceLevel = NotificationManager.IMPORTANCE_HIGH
+        )
+        Notifications.createNotificationChannel(
+            context = applicationContext,
+            FOUND_NOTIFICATION,
             importanceLevel = NotificationManager.IMPORTANCE_HIGH
         )
         Notifications.createNotificationChannel(context = applicationContext)
@@ -272,7 +321,7 @@ class LocationService : Service() {
             pendingIntent = getPendingIntent()
         )
         startForeground(1, notification)
-        startTracking(gameId!!, isSeeker!!)
+        startTracking(gameId, isSeeker)
         return START_NOT_STICKY
     }
 
