@@ -3,6 +3,7 @@ package com.example.seekers
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,6 +23,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
+import com.example.seekers.ui.theme.Ivory
 import com.example.seekers.ui.theme.avatarBackground
 import kotlinx.coroutines.launch
 
@@ -57,7 +59,7 @@ fun AvatarPickerScreen(
                 }
             })
         },
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize().background(color = Ivory)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 64.dp),
@@ -68,7 +70,7 @@ fun AvatarPickerScreen(
             Spacer(modifier = Modifier.height(32.dp))
             Card(
                 shape = CircleShape,
-                border = BorderStroke(2.dp, Color.Black),
+                border = BorderStroke(2.dp, Color.White),
                 backgroundColor = avatarBackground,
                 modifier = Modifier
                     .clickable {
@@ -134,7 +136,7 @@ fun BottomSheet(onPick: (Int) -> Unit) {
             items(avatarList) { avatar ->
                 Card(
                     shape = CircleShape,
-                    border = BorderStroke(2.dp, Color.Black),
+                    border = BorderStroke(2.dp, Color.White),
                     backgroundColor = avatarBackground,
                     modifier = Modifier
                         .padding(10.dp)

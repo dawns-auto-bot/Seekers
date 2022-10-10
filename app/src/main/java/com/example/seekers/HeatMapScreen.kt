@@ -6,24 +6,24 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ColorSpace
 import android.os.Build
 import android.os.CountDownTimer
-import android.os.Looper
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.AndroidViewModel
@@ -46,6 +47,9 @@ import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.QRScanner
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.general.toGrayscale
+import com.example.seekers.ui.theme.DarkerGreen
+import com.example.seekers.ui.theme.Ivory
+import com.example.seekers.ui.theme.Raisin
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.*
 import com.google.firebase.Timestamp
@@ -55,8 +59,10 @@ import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.ktx.utils.withSphericalOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.example.seekers.ui.theme.TurquoiseGreen
 import kotlin.math.*
 
+@OptIn(ExperimentalMaterialApi::class)
 @RequiresApi(Build.VERSION_CODES.Q)
 @SuppressLint("MissingPermission")
 @Composable
@@ -118,7 +124,7 @@ fun HeatMapScreen(
                 scrollGesturesEnabled = mapControl,
                 scrollGesturesEnabledDuringRotateOrZoom = mapControl,
                 tiltGesturesEnabled = mapControl,
-                zoomControlsEnabled = mapControl,
+                zoomControlsEnabled = false,
                 zoomGesturesEnabled = mapControl
             )
         )
@@ -222,104 +228,228 @@ fun HeatMapScreen(
         }
     }
 
-    properties?.let { props ->
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (locationAllowed) {
-                HeatMap(
-                    state = cameraPositionState,
-                    center = center,
-                    radius = radius,
-                    minZoom = minZoom,
-                    properties = props,
-                    uiSettings = uiSettings,
-                    heatPositions = heatPositions,
-                    movingPlayers = movingPlayers,
-                    eliminatedPlayers = eliminatedPlayers,
-                    tileProvider = tileProvider,
-                    circleCoords = circleCoords
-                )
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberBottomDrawerState( BottomDrawerValue.Closed )
 
-                timer?.let {
-                    GameTimer(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp),
-                        vm = vm
-                    )
-                    LaunchedEffect(Unit) {
-                        it.start()
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(8.dp)
-                ) {
-                    Button(onClick = {
-                        vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
-                        vm.stopService(context)
-                        navController.navigate(NavRoutes.StartGame.route)
-                    }) {
-                        Text(text = "Leave")
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        showRadar = true
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                ) {
-                    Text(text = "Radar")
-                }
-
+    BottomDrawer(
+        gesturesEnabled = false,
+        drawerState = drawerState,
+        drawerContent = {
+            Surface(
+                shape = RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp),
+                color = TurquoiseGreen,
+                border = BorderStroke(1.dp, Raisin),
+            ) {
                 Row(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .fillMaxWidth()
+                        .background(color = TurquoiseGreen)
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    QRButton {
-                        if (!showQR) {
-                            showQR = true
+                    IconButton(
+                        onClick = { scope.launch { drawerState.close() } },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Close, contentDescription = "Close", tint = Raisin)
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            showRadar = true
+                        },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Radar, contentDescription = "Radar", tint = Raisin)
+                                // Text(text = "Radar", color = Color.White)
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            if(isSeeker == true) {
+                                if (!cameraIsAllowed) {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                } else {
+                                    cameraIsAllowed = true
+                                }
+                                if (!showQRScanner) {
+                                    showQRScanner = true
+                                }
+                            } else {
+                                if (!showQR) {
+                                    showQR = true
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(56.dp),
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                if(isSeeker == true)
+                                    Icon(Icons.Default.QrCodeScanner, contentDescription = "", tint = Raisin, modifier = Modifier.size(44.dp))
+                                else
+                                    Icon(Icons.Default.QrCode, contentDescription = "", tint = Raisin, modifier = Modifier.size(44.dp))
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                        },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.List, contentDescription = "", tint = Raisin)
+                                // Text(text = "Players", color = Color.White)
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                            vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
+                            vm.stopService(context)
+                            navController.navigate(NavRoutes.StartGame.route)
+                        },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.ExitToApp, contentDescription = "", tint = Color.Red)
+
+                            }
+                        })
+                }
+            }
+
+        },
+        drawerBackgroundColor = Color.Transparent,
+        drawerElevation = 0.dp,
+        content = {
+            Scaffold(
+                floatingActionButtonPosition = FabPosition.Center,
+                isFloatingActionButtonDocked = true,
+                floatingActionButton = {
+                    FloatingActionButton(
+                        elevation = FloatingActionButtonDefaults.elevation(8.dp),
+                        modifier = Modifier.border(BorderStroke(0.dp, Raisin), shape = CircleShape),
+                        shape = CircleShape,
+                        backgroundColor = TurquoiseGreen,
+                        contentColor = Raisin,
+                        onClick = {
+                            scope.launch { drawerState.open() }
                         }
+                    ) {
+                        Icon(Icons.Filled.Dashboard,"", modifier = Modifier.size(38.dp))
                     }
-                    QRScanButton {
-                        if (!cameraIsAllowed) {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                },
+            ) {
+                properties?.let { props ->
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (locationAllowed) {
+                            HeatMap(
+                                state = cameraPositionState,
+                                center = center,
+                                radius = radius,
+                                minZoom = minZoom,
+                                properties = props,
+                                uiSettings = uiSettings,
+                                heatPositions = heatPositions,
+                                movingPlayers = movingPlayers,
+                                eliminatedPlayers = eliminatedPlayers,
+                                tileProvider = tileProvider,
+                                circleCoords = circleCoords
+                            )
+
+                            timer?.let {
+                                GameTimer(
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(8.dp)
+                                        .width(100.dp),
+                                    vm = vm
+                                )
+                                LaunchedEffect(Unit) {
+                                    it.start()
+                                }
+                            }
+
+                            // BUTTONS IN BOTTOM DRAWER
+                            /* Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(8.dp)
+                            ) {
+                                Button(onClick = {
+                                    vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
+                                    vm.stopService(context)
+                                    navController.navigate(NavRoutes.StartGame.route)
+                                }) {
+                                    Text(text = "Leave")
+                                }
+                            } */
+
+                            /* Button(
+                                onClick = {
+                                    showRadar = true
+                                },
+                                modifier = Modifier.align(Alignment.BottomCenter)
+                            ) {
+                                Text(text = "Radar")
+                            } */
+
+                            /* Row(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                QRButton {
+                                    if (!showQR) {
+                                        showQR = true
+                                    }
+                                }
+                                QRScanButton {
+                                    if (!cameraIsAllowed) {
+                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                    } else {
+                                        cameraIsAllowed = true
+                                    }
+                                    if (!showQRScanner) {
+                                        showQRScanner = true
+                                    }
+                                }
+                            } */
+
+                            if (showRadar) {
+                                RadarDialog(gameId = gameId) { showRadar = false }
+                            }
+
+                            if (showQR) {
+                                ShowMyQRDialog {
+                                    showQR = false
+                                }
+                            }
+
+                            if (showQRScanner && cameraIsAllowed) {
+                                QRScannerDialog(onDismiss = { showQRScanner = false }) {
+                                    vm.setPlayerFound(gameId, it)
+                                    showQRScanner = false
+                                }
+                            }
+
                         } else {
-                            cameraIsAllowed = true
-                        }
-                        if (!showQRScanner) {
-                            showQRScanner = true
+                            Text(text = "Location permission needed")
                         }
                     }
                 }
-
-                if (showRadar) {
-                    RadarDialog(gameId = gameId) { showRadar = false }
-                }
-
-                if (showQR) {
-                    ShowMyQRDialog {
-                        showQR = false
-                    }
-                }
-
-                if (showQRScanner && cameraIsAllowed) {
-                    QRScannerDialog(onDismiss = { showQRScanner = false }) {
-                        vm.setPlayerFound(gameId, it)
-                        showQRScanner = false
-                    }
-                }
-
-            } else {
-                Text(text = "Location permission needed")
             }
         }
-    }
-
+    )
 }
 
 @Composable
@@ -487,11 +617,11 @@ fun GameTimer(modifier: Modifier = Modifier, vm: HeatMapViewModel) {
     countdown?.let {
         Card(
             modifier = modifier,
-            backgroundColor = Color.LightGray,
+            backgroundColor = TurquoiseGreen,
             shape = RoundedCornerShape(25.dp)
         ) {
-            Row(Modifier.padding(8.dp)) {
-                Text(text = secondsToText(it))
+            Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.Center) {
+                Text(text = secondsToText(it), color = Color.White, fontSize = 20.sp)
             }
         }
 

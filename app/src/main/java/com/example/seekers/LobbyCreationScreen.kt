@@ -26,6 +26,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.seekers.general.PermissionDialog
 import com.example.seekers.general.getPermissionLauncher
+import com.example.seekers.ui.theme.TurquoiseGreen
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
@@ -111,7 +112,7 @@ fun LobbyCreationScreen(
                 IconButton(
                     resourceId = R.drawable.map,
                     buttonText = "Define Area",
-                    buttonColor = if (showMap) Color(0xFF838383) else Color.LightGray,
+                    buttonColor = TurquoiseGreen,
                 ) {
                     if (LocationHelper.checkPermissions(context)) {
                         isLocationAllowed = true
@@ -247,18 +248,18 @@ fun Input(
     onChangeValue: (String) -> Unit
 ) {
     Column(modifier = modifier) {
-        Text(text = title)
-        Spacer(modifier = Modifier.height(8.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            backgroundColor = Color.LightGray,
+            backgroundColor = Color.Transparent,
             elevation = 0.dp,
             shape = MaterialTheme.shapes.medium
         ) {
-            TextField(
+            OutlinedTextField(
                 value = value,
                 onValueChange = onChangeValue,
-                keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                label = { Text(text = title) },
+
             )
         }
     }

@@ -1,5 +1,6 @@
 package com.example.seekers
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Surface
@@ -10,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
+import com.example.seekers.general.LogOutButton
+import com.example.seekers.ui.theme.Ivory
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -17,7 +20,10 @@ import com.google.firebase.ktx.Firebase
 fun StartGameScreen(navController: NavController) {
 
     Surface {
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Ivory)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize(),
@@ -37,11 +43,9 @@ fun StartGameScreen(navController: NavController) {
                     .align(Alignment.TopEnd)
                     .padding(32.dp)
             ) {
-                Button(onClick = {
+                LogOutButton(text = "Log out") {
                     Firebase.auth.signOut()
                     navController.navigate(NavRoutes.MainScreen.route)
-                }) {
-                    Text("Log out")
                 }
             }
         }

@@ -4,6 +4,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,6 +36,7 @@ import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.generateQRCode
+import com.example.seekers.ui.theme.BrightRed
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.Dispatchers
@@ -128,7 +130,10 @@ fun LobbyQRScreen(
                     } else {
                         showLeaveDialog = true
                     }
-                }) {
+                }, colors = ButtonDefaults.buttonColors(
+                    backgroundColor = BrightRed,
+                    contentColor = Color.White
+                )) {
                     Text(text = "Leave")
                 }
             },

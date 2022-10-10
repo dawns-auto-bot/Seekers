@@ -11,14 +11,16 @@ import android.widget.FrameLayout
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +42,9 @@ import com.budiyev.android.codescanner.CodeScannerView
 import com.budiyev.android.codescanner.DecodeCallback
 import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
-import com.google.zxing.Result
+import com.example.seekers.ui.theme.TurquoiseGreen
+import com.example.seekers.ui.theme.BrightRed
+import com.example.seekers.ui.theme.Raisin
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 
@@ -101,13 +105,30 @@ fun QRScanner(context: Context, onScanned: (String) -> Unit) {
 @Composable
 fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
     Button(
+        border = BorderStroke(1.dp, Raisin),
         onClick = onClick,
         modifier = modifier
             .width(250.dp)
-            .height(50.dp)
-            .clip(RoundedCornerShape(25.dp)),
-        colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.Black)
+            .height(50.dp),
+        shape = RoundedCornerShape(15),
+        colors = ButtonDefaults.outlinedButtonColors(TurquoiseGreen, contentColor = Raisin)
     ) {
+        Text(text = text)
+    }
+}
+
+@Composable
+fun LogOutButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
+    Button(
+        border = BorderStroke(1.dp, Color.White),
+        onClick = onClick,
+        modifier = modifier
+            .width(150.dp)
+            .height(50.dp),
+        shape = RoundedCornerShape(15),
+        colors = ButtonDefaults.outlinedButtonColors(BrightRed, contentColor = Color.White)
+    ) {
+        Icon(Icons.Default.ArrowBack, contentDescription = "", tint = Color.White)
         Text(text = text)
     }
 }
@@ -125,7 +146,7 @@ fun IconButton(
         modifier = modifier
             .height(50.dp)
             .clip(RoundedCornerShape(25.dp)),
-        colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Color.Black),
+        colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Color.White),
     ) {
         Box(
             modifier = Modifier.fillMaxWidth(),
@@ -165,8 +186,8 @@ fun VerticalSlider(
         // Text(text = value.toString(), fontSize = 10.sp)
         Slider(
             colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF838383),
-                activeTrackColor = Color(0xFF838383),
+                thumbColor = TurquoiseGreen,
+                activeTrackColor = TurquoiseGreen,
                 inactiveTrackColor = Color.LightGray
             ),
             onValueChangeFinished = onValueChangeFinished,
