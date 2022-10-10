@@ -44,6 +44,8 @@ fun LoginForm(
     token: String,
     launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) {
+
+    var invalidCredentials by remember { mutableStateOf(false) }
     // Email
     var email by remember { mutableStateOf(TextFieldValue("")) }
 
@@ -64,6 +66,9 @@ fun LoginForm(
         Text(text = "Welcome Back", fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Text(text = "Sign in to continue", fontSize = 16.sp, color = Color.LightGray)
         Spacer(modifier = Modifier.height(40.dp))
+        if(invalidCredentials) {
+            Text(text = "Invalid email or password", color = Color.Red)
+        }
         CustomOutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -115,12 +120,23 @@ fun LoginForm(
                             password.text
                         )
                             .addOnCompleteListener() {
-                                println("logged in as: ${model.fireBaseAuth.currentUser}")
-                                model.setUser(model.fireBaseAuth.currentUser)
-                                navController.navigate(NavRoutes.StartGame.route)
+                                if (it.isSuccessful) {
+                                    model.setUser(model.fireBaseAuth.currentUser)
+                                    println("logged in as: ${model.fireBaseAuth.currentUser}")
+                                    invalidCredentials = false
+                                    navController.navigate(NavRoutes.StartGame.route)
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "login failed!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
                             }
                             .addOnFailureListener {
-                                Log.e("login fail", "LoginForm: ", it)
+                                invalidCredentials = true
+//                                Log.e("login fail", "LoginForm: ", it)
                             }
                     }
                 }, text = "Login"
