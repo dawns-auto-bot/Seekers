@@ -150,13 +150,13 @@ fun LobbyCreationScreen(
                         val player = Player(
                             nickname = nickname,
                             avatarId = avatarId,
-                            playerId = FirestoreHelper.uid!!,
+                            playerId = FirebaseHelper.uid!!,
                             inLobbyStatus = InLobbyStatus.CREATOR.value,
                             inGameStatus = InGameStatus.SEEKER.value
                         )
                         vm.addPlayer(player, gameId)
                         vm.updateUser(
-                            FirestoreHelper.uid!!,
+                            FirebaseHelper.uid!!,
                             mapOf(Pair("currentGameId", gameId))
                         )
                         navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
@@ -265,7 +265,7 @@ fun Input(
 }
 
 class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(application) {
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
     val maxPlayers = MutableLiveData<Int>()
     val timeLimit = MutableLiveData<Int>()
     val countdown = MutableLiveData<Int>()

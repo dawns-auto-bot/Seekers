@@ -128,7 +128,7 @@ fun convertToClock(seconds: Int): String {
 }
 
 class CountdownViewModel : ViewModel() {
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
     val initialValue = MutableLiveData<Int>()
     val countdown = MutableLiveData<Int>()
 

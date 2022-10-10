@@ -26,7 +26,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.GeoPoint
@@ -170,7 +169,7 @@ fun FoundPlayerCard(
 }
 
 class RadarViewModel() : ViewModel() {
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
     val playersNearByCount = MutableLiveData<Int>()
     private val _scanningStatus = MutableLiveData<Int>()
     val scanningStatus: LiveData<Int> = _scanningStatus
@@ -207,7 +206,7 @@ class RadarViewModel() : ViewModel() {
 
             val playersFiltered =
                 playersWithDistance.filter {
-                    it.first.distanceStatus != PlayerDistance.NOT_IN_RADAR.value && it.first.playerId != FirestoreHelper.uid!!
+                    it.first.distanceStatus != PlayerDistance.NOT_IN_RADAR.value && it.first.playerId != FirebaseHelper.uid!!
                 }
             players.postValue(playersFiltered.sortedBy { it.second })
         }

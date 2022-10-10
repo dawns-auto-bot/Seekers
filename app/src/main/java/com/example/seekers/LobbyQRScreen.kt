@@ -64,7 +64,7 @@ fun LobbyQRScreen(
         launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
             vm.getLobby(gameId)
-            vm.getPlayer(gameId, FirestoreHelper.uid!!)
+            vm.getPlayer(gameId, FirebaseHelper.uid!!)
         }
     }
 
@@ -76,7 +76,7 @@ fun LobbyQRScreen(
                         Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
                             .show()
                     }
-                    vm.updateUser(FirestoreHelper.uid!!, mapOf(Pair("currentGameId", "")))
+                    vm.updateUser(FirebaseHelper.uid!!, mapOf(Pair("currentGameId", "")))
                     navController.navigate(NavRoutes.StartGame.route)
                 }
                 LobbyStatus.COUNTDOWN.value -> {
@@ -91,10 +91,10 @@ fun LobbyQRScreen(
 
     LaunchedEffect(players) {
         if (players.isNotEmpty()) {
-            val currentPlayer = players.find { it.playerId == FirestoreHelper.uid!! }
+            val currentPlayer = players.find { it.playerId == FirebaseHelper.uid!! }
             if (currentPlayer == null) {
                 Toast.makeText(context, "You were kicked from the lobby", Toast.LENGTH_LONG).show()
-                vm.updateUser(FirestoreHelper.uid!!, mapOf(Pair("currentGameId", "")))
+                vm.updateUser(FirebaseHelper.uid!!, mapOf(Pair("currentGameId", "")))
                 navController.navigate(NavRoutes.StartGame.route)
             }
         }
@@ -183,7 +183,7 @@ fun LobbyQRScreen(
             LeaveGameDialog(onDismissRequest = { showLeaveDialog = false }, onConfirm = {
                 vm.removePlayer(gameId, "")
                 vm.updateUser(
-                    FirestoreHelper.uid!!,
+                    FirebaseHelper.uid!!,
                     mapOf(Pair("currentGameId", ""))
                 )
                 navController.navigate(NavRoutes.StartGame.route)
@@ -195,7 +195,7 @@ fun LobbyQRScreen(
                     Pair("status", LobbyStatus.DELETED.value)
                 )
                 vm.updateUser(
-                    FirestoreHelper.uid!!,
+                    FirebaseHelper.uid!!,
                     mapOf(Pair("currentGameId", ""))
                 )
                 vm.updateLobby(changeMap, gameId)
@@ -472,7 +472,7 @@ fun PlayerCard(
 
 class LobbyViewModel() : ViewModel() {
     val TAG = "LobbyVM"
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
     val players = MutableLiveData(listOf<Player>())
     val lobby = MutableLiveData<Lobby>()
     val isCreator = MutableLiveData<Boolean>()

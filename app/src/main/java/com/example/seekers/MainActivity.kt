@@ -5,7 +5,6 @@ import android.content.ContentValues.TAG
 import android.os.Build
 
 import android.os.Bundle
-import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -437,7 +436,7 @@ class AuthenticationViewModel(auth: FirebaseAuth) : ViewModel() {
     var fireBaseAuth = auth
     var user = MutableLiveData<FirebaseUser>(null)
     var userIsInUsers = MutableLiveData<Boolean>()
-    var firestore = FirestoreHelper
+    var firestore = FirebaseHelper
     val currentGameId = MutableLiveData<String>()
     val gameStatus = MutableLiveData<Int>()
 

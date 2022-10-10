@@ -6,16 +6,15 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ColorSpace
 import android.os.Build
 import android.os.CountDownTimer
-import android.os.Looper
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -31,6 +30,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -42,10 +42,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.seekers.general.QRCodeComponent
-import com.example.seekers.general.QRScanner
-import com.example.seekers.general.generateQRCode
-import com.example.seekers.general.toGrayscale
+import com.example.seekers.general.*
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.*
 import com.google.firebase.Timestamp
@@ -84,6 +81,11 @@ fun HeatMapScreen(
     var showRadar by remember { mutableStateOf(false) }
     var showQR by remember { mutableStateOf(false) }
     var showQRScanner by remember { mutableStateOf(false) }
+    var showPlayerFound by remember { mutableStateOf(false) }
+    var playerFound by remember { mutableStateOf("") }
+    var playerFoundMsg by remember { mutableStateOf("") }
+    var selfie: Bitmap? by remember { mutableStateOf(null) }
+    var showSendSelfie by remember { mutableStateOf(false) }
     var circleCoords by remember { mutableStateOf(listOf<LatLng>()) }
 
     val locationPermissionLauncher =
@@ -93,6 +95,13 @@ fun HeatMapScreen(
     val cameraPermissionLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
             cameraIsAllowed = allowed
+        }
+    val selfieLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) {
+            it?.let {
+                selfie = it
+                showSendSelfie = true
+            }
         }
 
 
@@ -171,7 +180,7 @@ fun HeatMapScreen(
     }
 
     LaunchedEffect(eliminatedPlayers) {
-        eliminatedPlayers.find { it.playerId == FirestoreHelper.uid!! }?.let {
+        eliminatedPlayers.find { it.playerId == FirebaseHelper.uid!! }?.let {
             vm.stopService(context)
         }
     }
@@ -229,7 +238,6 @@ fun HeatMapScreen(
                     state = cameraPositionState,
                     center = center,
                     radius = radius,
-                    minZoom = minZoom,
                     properties = props,
                     uiSettings = uiSettings,
                     heatPositions = heatPositions,
@@ -257,7 +265,7 @@ fun HeatMapScreen(
                         .padding(8.dp)
                 ) {
                     Button(onClick = {
-                        vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
+                        vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
                         vm.stopService(context)
                         navController.navigate(NavRoutes.StartGame.route)
                     }) {
@@ -310,16 +318,55 @@ fun HeatMapScreen(
                 if (showQRScanner && cameraIsAllowed) {
                     QRScannerDialog(onDismiss = { showQRScanner = false }) {
                         vm.setPlayerFound(gameId, it)
+                        playerFound = it
+                        playerFoundMsg =
+                            "Congrats! You found $it!\nTake a selfie to show it to other players?"
                         showQRScanner = false
+                        showPlayerFound = true
                     }
                 }
 
+                if (showPlayerFound) {
+                    PlayerFoundDialog(message = playerFoundMsg, onCancel = {
+                        playerFound = ""
+                        playerFoundMsg = ""
+                        showPlayerFound = false
+                    }) {
+                        selfieLauncher.launch(null)
+                        showPlayerFound = false
+                    }
+                }
+
+                selfie?.let {
+                    if (showSendSelfie) {
+                        SendSelfieDialog(
+                            selfie = it,
+                            onDismiss = {
+                                playerFoundMsg = ""
+                                playerFound = ""
+                                selfie = null
+                                showSendSelfie = false
+                            },
+                            sendPic = {
+                                vm.sendSelfie(
+                                    FirebaseHelper.uid!!,
+                                    gameId,
+                                    it
+                                )
+                                playerFoundMsg = ""
+                                playerFound = ""
+                                selfie = null
+                                showSendSelfie = false
+                            }) {
+                            selfieLauncher.launch(null)
+                        }
+                    }
+                }
             } else {
                 Text(text = "Location permission needed")
             }
         }
     }
-
 }
 
 @Composable
@@ -327,7 +374,6 @@ fun HeatMap(
     state: CameraPositionState,
     center: LatLng?,
     radius: Int?,
-    minZoom: Float,
     properties: MapProperties,
     uiSettings: MapUiSettings,
     heatPositions: List<LatLng>,
@@ -436,8 +482,8 @@ fun QRButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
 
 @Composable
 fun ShowMyQRDialog(onDismiss: () -> Unit) {
-    val playerId = FirestoreHelper.uid!!
-//    val playerId = "player 1"
+//    val playerId = FirebaseHelper.uid!!
+    val playerId = "player 1"
     val qrBitmap = generateQRCode(playerId)
     Dialog(onDismissRequest = onDismiss) {
         Card(backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)) {
@@ -463,6 +509,63 @@ fun QRScanButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
         )
     }
 }
+
+@Composable
+fun PlayerFoundDialog(message: String, onCancel: () -> Unit, onTakePic: () -> Unit) {
+    Dialog(onDismissRequest = onCancel) {
+        Card(backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(text = message)
+                Row {
+                    CustomButton(text = "Take a selfie", modifier = Modifier.weight(1f)) {
+                        onTakePic()
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    CustomButton(text = "Close") {
+                        onCancel()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SendSelfieDialog(
+    selfie: Bitmap,
+    onDismiss: () -> Unit,
+    sendPic: () -> Unit,
+    takeNew: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Image(bitmap = selfie.asImageBitmap(), contentDescription = "selfie")
+                Row {
+                    CustomButton(text = "Cancel", modifier = Modifier.weight(1f)) {
+                        onDismiss()
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    CustomButton(text = "Take another", modifier = Modifier.weight(1f)) {
+                        takeNew()
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    CustomButton(text = "Send") {
+                        sendPic()
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -549,7 +652,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
     val lobby = MutableLiveData<Lobby>()
     val radius = Transformations.map(lobby) {
         it.radius
@@ -564,7 +667,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     val players = MutableLiveData<List<Player>>()
     val isSeeker = MutableLiveData<Boolean>()
     val playersWithoutSelf = Transformations.map(players) { players ->
-        players.filter { it.playerId != FirestoreHelper.uid!! }
+        players.filter { it.playerId != FirebaseHelper.uid!! }
     }
     val heatPositions = Transformations.map(playersWithoutSelf) { players ->
         players.filter { it.inGameStatus == InGameStatus.PLAYER.value }
@@ -679,7 +782,8 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
                 val playersFetched = data.toObjects(Player::class.java)
                 players.postValue(playersFetched)
                 if (isSeeker.value == null) {
-                    val myStatus = playersFetched.find { it.playerId == firestore.uid }?.inGameStatus
+                    val myStatus =
+                        playersFetched.find { it.playerId == firestore.uid }?.inGameStatus
                     myStatus?.let {
                         isSeeker.value = (it == InGameStatus.SEEKER.value)
                     }
@@ -731,8 +835,16 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
             gameId = gameId,
             playerId = playerId
         )
-//        sendFoundNotification()
     }
+
+    fun sendSelfie(playerId: String, gameId: String, selfie: Bitmap) {
+        firestore.sendSelfie(playerId, gameId, selfie)
+    }
+
+    fun getNews(gameId: String) {
+        firestore.getNews(gameId).addSnapshotListener { data, e ->  }
+    }
+
 
 //    private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
 //    private lateinit var locationCallback2: LocationCallback

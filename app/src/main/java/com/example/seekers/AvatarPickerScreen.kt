@@ -159,5 +159,5 @@ fun BottomSheet(onPick: (Int) -> Unit) {
 class AvatarViewModel() : ViewModel() {
     val avatarId = MutableLiveData<Int>(R.drawable.avatar_empty)
     val nickname = MutableLiveData("")
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
 }
