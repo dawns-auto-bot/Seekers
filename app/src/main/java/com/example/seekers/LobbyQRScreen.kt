@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import com.example.seekers.general.IconButton
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.runtime.*
@@ -39,13 +40,18 @@ import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.GeoPoint
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Composable
 fun LobbyQRScreen(
     navController: NavHostController,
-    vm: LobbyViewModel = viewModel(),
+    vm: LobbyCreationScreenViewModel = viewModel(),
     gameId: String,
 ) {
     val context = LocalContext.current
@@ -53,7 +59,6 @@ fun LobbyQRScreen(
     val players by vm.players.observeAsState(listOf())
     val lobby by vm.lobby.observeAsState()
     val isCreator by vm.isCreator.observeAsState()
-    val showQR by vm.showQR.observeAsState(false)
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
     var showEditRulesDialog by remember { mutableStateOf(false) }
@@ -206,7 +211,7 @@ fun LobbyQRScreen(
 
 @Composable
 fun EditRulesDialog(
-    vm: LobbyViewModel,
+    vm: LobbyCreationScreenViewModel,
     gameId: String,
     isCreator: Boolean,
     onDismissRequest: () -> Unit
@@ -216,10 +221,11 @@ fun EditRulesDialog(
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
     val countdown by vm.countdown.observeAsState()
+    val center by vm.center.observeAsState()
 
     Dialog(onDismissRequest) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(10.dp),
             color = Color.White,
         ) {
             Box(
@@ -247,8 +253,10 @@ fun EditRulesDialog(
                         Spacer(modifier = Modifier.height(20.dp))
                         Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
                             CustomButton(text = "Save") {
-                                if (maxPlayers != null && timeLimit != null && radius != null && countdown != null) {
+                                if (maxPlayers != null && timeLimit != null && radius != null && countdown != null && center != null) {
+                                    val centerGeoPoint = GeoPoint(center!!.latitude, center!!.longitude)
                                     val changeMap = mapOf(
+                                        Pair("center", centerGeoPoint),
                                         Pair("maxPlayers", maxPlayers!!),
                                         Pair("timeLimit", timeLimit!!),
                                         Pair("radius", radius!!),
@@ -274,7 +282,7 @@ fun EditRulesDialog(
 }
 
 @Composable
-fun ShowRules(vm: LobbyViewModel) {
+fun ShowRules(vm: LobbyCreationScreenViewModel) {
     val lobby by vm.lobby.observeAsState()
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -286,37 +294,85 @@ fun ShowRules(vm: LobbyViewModel) {
 }
 
 @Composable
-fun EditRulesForm(vm: LobbyViewModel) {
+fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
+    val context = LocalContext.current
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
     val countdown by vm.countdown.observeAsState()
+    val showMap by vm.showMap.observeAsState(false)
+    var isLocationAllowed by remember { mutableStateOf(false) }
+    var showPermissionsDialog by remember { mutableStateOf(false) }
+    var cameraState = rememberCameraPositionState()
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Input(
-            title = stringResource(id = R.string.max_players),
-            value = maxPlayers?.toString() ?: "",
-            keyboardType = KeyboardType.Number,
-            onChangeValue = { vm.updateMaxPlayers(it.toIntOrNull()) })
+    if (!showMap) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Input(
+                title = stringResource(id = R.string.max_players),
+                value = maxPlayers?.toString() ?: "",
+                keyboardType = KeyboardType.Number,
+                onChangeValue = { vm.updateMaxPlayers(it.toIntOrNull()) })
 
-        Input(
-            title = stringResource(id = R.string.time_limit),
-            value = timeLimit?.toString() ?: "",
-            keyboardType = KeyboardType.Number,
-            onChangeValue = { vm.updateTimeLimit(it.toIntOrNull()) })
+            Input(
+                title = stringResource(id = R.string.time_limit),
+                value = timeLimit?.toString() ?: "",
+                keyboardType = KeyboardType.Number,
+                onChangeValue = { vm.updateTimeLimit(it.toIntOrNull()) })
 
-        Input(
-            title = stringResource(id = R.string.radius),
-            value = radius?.toString() ?: "",
-            keyboardType = KeyboardType.Number,
-            onChangeValue = { vm.updateRadius(it.toIntOrNull()) })
+            Input(
+                title = stringResource(id = R.string.countdown),
+                value = countdown?.toString() ?: "",
+                keyboardType = KeyboardType.Number,
+                onChangeValue = { vm.updateCountdown(it.toIntOrNull()) })
 
-        Input(
-            title = stringResource(id = R.string.countdown),
-            value = countdown?.toString() ?: "",
-            keyboardType = KeyboardType.Number,
-            onChangeValue = { vm.updateCountdown(it.toIntOrNull()) })
+            IconButton(
+                resourceId = R.drawable.map,
+                buttonText = "Define Area",
+                buttonColor = if (showMap) Color(0xFF838383) else Color.LightGray,
+            ) {
+                if (LocationHelper.checkPermissions(context)) {
+                    isLocationAllowed = true
+                    vm.updateShowMap(true)
+                } else {
+                    showPermissionsDialog = true
+                }
+            }
+        }
+    } else {
+        if (isLocationAllowed) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Icon(imageVector = Icons.Filled.Cancel, contentDescription = "cancel",
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .clickable {
+                            vm.updateShowMap(false)
+                        }
+                )
+                AreaSelectionMap(
+                    vm = vm,
+                    properties = MapProperties(
+                        mapType = MapType.SATELLITE,
+                        isMyLocationEnabled = true
+                    ),
+                    settings = MapUiSettings(
+                        zoomControlsEnabled = true,
+                        zoomGesturesEnabled = true,
+                        rotationGesturesEnabled = false,
+                        scrollGesturesEnabled = true
+                    ),
+                    state = cameraState
+                )
+            }
+
+        } else {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(text = "Please allow location to set a playing area")
+            }
+        }
     }
+
+
 }
 
 @Composable
@@ -395,7 +451,7 @@ fun Participants(
     modifier: Modifier = Modifier,
     players: List<Player>,
     isCreator: Boolean,
-    vm: LobbyViewModel,
+    vm: LobbyCreationScreenViewModel,
     gameId: String
 ) {
     var kickableIndex: Int? by remember { mutableStateOf(null) }
@@ -422,7 +478,7 @@ fun Participants(
 fun PlayerCard(
     player: Player,
     isCreator: Boolean,
-    vm: LobbyViewModel,
+    vm: LobbyCreationScreenViewModel,
     gameId: String,
     setKickableIndex: () -> Unit,
     isKickable: Boolean
@@ -502,79 +558,74 @@ fun PlayerCard(
     }
 }
 
-class LobbyViewModel() : ViewModel() {
-    val TAG = "LobbyVM"
-    val firestore = FirebaseHelper
-    val players = MutableLiveData(listOf<Player>())
-    val lobby = MutableLiveData<Lobby>()
-    val isCreator = MutableLiveData<Boolean>()
-    val playerId = firestore.uid
-    val showQR = MutableLiveData<Boolean>()
-    val maxPlayers = MutableLiveData<Int>()
-    val timeLimit = MutableLiveData<Int>()
-    val radius = MutableLiveData<Int>()
-    val countdown = MutableLiveData<Int>()
-
-    fun updateMaxPlayers(newVal: Int?) {
-        maxPlayers.value = newVal
-    }
-
-    fun updateTimeLimit(newVal: Int?) {
-        timeLimit.value = newVal
-    }
-
-    fun updateRadius(newVal: Int?) {
-        radius.value = newVal
-    }
-
-    fun updateQRImageVisibility(value: Boolean) {
-        showQR.postValue(value)
-    }
-
-    fun updateCountdown(newVal: Int?) {
-        countdown.value = newVal
-    }
-
-    fun removePlayer(gameId: String, playerId: String) =
-        firestore.removePlayer(gameId = gameId, playerId = playerId)
-
-    fun getPlayers(gameId: String) {
-        firestore.getPlayers(gameId)
-            .addSnapshotListener { list, e ->
-                list ?: run {
-                    Log.e(TAG, "getPlayers: ", e)
-                    return@addSnapshotListener
-                }
-                val playerList = list.toObjects(Player::class.java)
-                players.postValue(playerList)
-            }
-    }
-
-    fun getLobby(gameId: String) {
-        firestore.getLobby(gameId).addSnapshotListener { data, e ->
-            data?.let {
-                lobby.postValue(it.toObject(Lobby::class.java))
-            }
-        }
-    }
-
-    fun updateLobby(changeMap: Map<String, Any>, gameId: String) =
-        firestore.updateLobby(changeMap, gameId)
-
-    fun getPlayer(gameId: String, playerId: String) {
-        firestore.getPlayer(gameId, playerId).get()
-            .addOnSuccessListener { data ->
-                val player = data.toObject(Player::class.java)
-                player?.let {
-                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.value)
-                }
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "getPlayer: ", it)
-            }
-    }
-
-    fun updateUser(userId: String, changeMap: Map<String, Any>) =
-        firestore.updateUser(userId, changeMap)
-
-}
+//class LobbyViewModel() : ViewModel() {
+//    val TAG = "LobbyVM"
+//    val firestore = FirebaseHelper
+//    val players = MutableLiveData(listOf<Player>())
+//    val lobby = MutableLiveData<Lobby>()
+//    val isCreator = MutableLiveData<Boolean>()
+//    val playerId = firestore.uid
+//    val maxPlayers = MutableLiveData<Int>()
+//    val timeLimit = MutableLiveData<Int>()
+//    val radius = MutableLiveData<Int>()
+//    val countdown = MutableLiveData<Int>()
+//
+//    fun updateMaxPlayers(newVal: Int?) {
+//        maxPlayers.value = newVal
+//    }
+//
+//    fun updateTimeLimit(newVal: Int?) {
+//        timeLimit.value = newVal
+//    }
+//
+//    fun updateRadius(newVal: Int?) {
+//        radius.value = newVal
+//    }
+//
+//    fun updateCountdown(newVal: Int?) {
+//        countdown.value = newVal
+//    }
+//
+//    fun removePlayer(gameId: String, playerId: String) =
+//        firestore.removePlayer(gameId = gameId, playerId = playerId)
+//
+//    fun getPlayers(gameId: String) {
+//        firestore.getPlayers(gameId)
+//            .addSnapshotListener { list, e ->
+//                list ?: run {
+//                    Log.e(TAG, "getPlayers: ", e)
+//                    return@addSnapshotListener
+//                }
+//                val playerList = list.toObjects(Player::class.java)
+//                players.postValue(playerList)
+//            }
+//    }
+//
+//    fun getLobby(gameId: String) {
+//        firestore.getLobby(gameId).addSnapshotListener { data, e ->
+//            data?.let {
+//                lobby.postValue(it.toObject(Lobby::class.java))
+//            }
+//        }
+//    }
+//
+//    fun updateLobby(changeMap: Map<String, Any>, gameId: String) =
+//        firestore.updateLobby(changeMap, gameId)
+//
+//    fun getPlayer(gameId: String, playerId: String) {
+//        firestore.getPlayer(gameId, playerId).get()
+//            .addOnSuccessListener { data ->
+//                val player = data.toObject(Player::class.java)
+//                player?.let {
+//                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.value)
+//                }
+//            }
+//            .addOnFailureListener {
+//                Log.e(TAG, "getPlayer: ", it)
+//            }
+//    }
+//
+//    fun updateUser(userId: String, changeMap: Map<String, Any>) =
+//        firestore.updateUser(userId, changeMap)
+//
+//}

@@ -96,7 +96,7 @@ object FirebaseHelper {
 
     fun updateUser(userId: String, changeMap: Map<String, Any>) {
         usersRef.document(userId)
-            .set(changeMap)
+            .update(changeMap)
             .addOnSuccessListener {
                 Log.d(TAG, "updateUser: $userId updated successfully")
             }

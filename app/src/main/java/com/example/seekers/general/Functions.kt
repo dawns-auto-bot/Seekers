@@ -196,7 +196,7 @@ fun IconButton(
         onClick = onClick,
         modifier = modifier
             .height(50.dp)
-            .clip(RoundedCornerShape(25.dp)),
+            .clip(RoundedCornerShape(5.dp)),
         colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Color.Black),
     ) {
         Box(
