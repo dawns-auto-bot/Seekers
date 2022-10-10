@@ -119,6 +119,9 @@ fun LoginForm(
                                 model.setUser(model.fireBaseAuth.currentUser)
                                 navController.navigate(NavRoutes.StartGame.route)
                             }
+                            .addOnFailureListener {
+                                Log.e("login fail", "LoginForm: ", it)
+                            }
                     }
                 }, text = "Login"
             )
