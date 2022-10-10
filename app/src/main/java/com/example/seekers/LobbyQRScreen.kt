@@ -54,14 +54,14 @@ fun LobbyQRScreen(
     val lobby by vm.lobby.observeAsState()
     val isCreator by vm.isCreator.observeAsState()
     val showQR by vm.showQR.observeAsState(false)
-    val locService by sharedVM.locService.observeAsState()
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDismissDialog by remember { mutableStateOf(false) }
     var showEditRulesDialog by remember { mutableStateOf(false) }
+    var showQRDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        startLocService()
-        launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
             vm.getLobby(gameId)
             vm.getPlayer(gameId, FirebaseHelper.uid!!)
@@ -112,11 +112,7 @@ fun LobbyQRScreen(
             },
             navigationIcon = {
                 IconButton(onClick = {
-                    if (showQR) {
-                        vm.updateQRImageVisibility(false)
-                    } else {
-                        vm.updateQRImageVisibility(true)
-                    }
+                    showQRDialog = true
                 }) {
                     Icon(Icons.Outlined.QrCode2, "QR", modifier = Modifier.size(40.dp))
                 }
@@ -142,10 +138,6 @@ fun LobbyQRScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (showQR) {
-                QRCodeComponent(modifier = Modifier.weight(3f), bitmap)
-            }
-
             Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
             Participants(
                 Modifier
@@ -171,6 +163,13 @@ fun LobbyQRScreen(
                     }
                 }
             }
+
+        }
+        if (showQRDialog) {
+            QRDialog(
+                bitmap = bitmap,
+                onDismissRequest = { showQRDialog = false }
+            )
         }
         if (showEditRulesDialog) {
             EditRulesDialog(
@@ -357,6 +356,39 @@ fun DismissLobbyDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
         }
     )
 }
+
+@Composable
+fun QRDialog(
+    bitmap: Bitmap,
+    onDismissRequest: () -> Unit
+) {
+    Dialog(onDismissRequest = { onDismissRequest() }) {
+        Surface(
+            color = Color.White,
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.padding(30.dp)
+            ) {
+                QRCodeComponent(bitmap = bitmap)
+            }
+
+        }
+
+    }
+
+}
+
+@Composable
+fun QRCodeComponent(modifier: Modifier = Modifier, bitmap: Bitmap) {
+
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = "QR",
+        modifier = modifier.size(250.dp)
+    )
+}
+
 
 @Composable
 fun Participants(

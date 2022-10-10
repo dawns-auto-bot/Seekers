@@ -104,21 +104,6 @@ object FirebaseHelper {
         return lobbiesRef.document(gameId).collection("players").document(playerId)
     }
 
-    fun updateInGamePlayerDistanceStatus(
-        changeMap: Map<String, Any>,
-        player: Player,
-        gameId: String
-    ) {
-        val playerRef = lobbiesRef.document(gameId).collection("players").document(player.playerId)
-        playerRef.update(changeMap)
-            .addOnSuccessListener {
-                Log.d(TAG, "updateInGameDistanceStatus: ${player.playerId} distance updated")
-            }
-            .addOnFailureListener {
-                Log.e(TAG, "update: ", it)
-            }
-    }
-
     fun updatePlayerLocation(changeMap: Map<String, Any>, playerId: String, gameId: String) {
         val playerRef = lobbiesRef.document(gameId).collection("players").document(playerId)
         playerRef.update(changeMap)

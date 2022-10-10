@@ -11,7 +11,6 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.seekers.ui.theme.SeekersTheme
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.platform.LocalContext
@@ -27,7 +26,6 @@ import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.AuthResult
@@ -38,13 +36,9 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.firebase.auth.GoogleAuthProvider
@@ -62,20 +56,21 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import com.example.seekers.general.CustomButton
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.seekers.general.isEmailValid
+import com.example.seekers.general.isPasswordValid
 import kotlinx.coroutines.Dispatchers
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var oneTapClient: SignInClient
     private lateinit var signInRequest: BeginSignInRequest
-    private lateinit var sharedVM: SharedViewModel
 
     private val REQ_ONE_TAP = 2  // Can be any integer unique to the Activity
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        sharedVM = ViewModelProvider(this)[SharedViewModel::class.java]
 
 
         //Google
@@ -120,7 +115,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SeekersTheme {
-                MyAppNavHost(startLocService = { }, sharedVM = sharedVM)
+                MyAppNavHost()
             }
         }
     }
@@ -128,17 +123,26 @@ class MainActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.Q)
 @Composable
-fun MyAppNavHost(startLocService: () -> Unit, sharedVM: SharedViewModel) {
+fun MyAppNavHost() {
 
     val navController = rememberNavController()
+    val auth = Firebase.auth
 
     NavHost(
         navController = navController,
         startDestination = NavRoutes.MainScreen.route
     ) {
+        // Login or Sign up
         composable(NavRoutes.MainScreen.route) {
-            MainScreen(navController)
+            MainScreen(navController = navController)
         }
+
+        // Create Account screen
+        composable(NavRoutes.CreateAccount.route) {
+            CreateUserForm(auth = auth, navController = navController)
+        }
+
+        // Create lobby or join game screen
         composable(NavRoutes.StartGame.route) {
             StartGameScreen(navController)
         }
@@ -152,6 +156,8 @@ fun MyAppNavHost(startLocService: () -> Unit, sharedVM: SharedViewModel) {
             val isCreator = it.arguments!!.getBoolean("isCreator")
             AvatarPickerScreen(navController = navController, isCreator = isCreator)
         }
+
+        //Lobby rules screen
         composable(NavRoutes.LobbyCreation.route + "/{nickname}/{avatarId}",
             arguments = listOf(
                 navArgument("nickname") {
@@ -178,12 +184,9 @@ fun MyAppNavHost(startLocService: () -> Unit, sharedVM: SharedViewModel) {
             )
         ) {
             val gameId = it.arguments!!.getString("gameId")!!
-//            startLocService()
             LobbyQRScreen(
                 navController = navController,
                 gameId = gameId,
-                startLocService = startLocService,
-                sharedVM = sharedVM
             )
         }
         //QR Scanner
@@ -224,15 +227,10 @@ fun MyAppNavHost(startLocService: () -> Unit, sharedVM: SharedViewModel) {
             HeatMapScreen(mapControl = true, navController = navController, gameId = gameId)
         }
     }
-
-
 }
 
 @Composable
-fun MainScreen(navController: NavController) {
-    val auth = Firebase.auth
-    val vm = AuthenticationViewModel(auth)
-    vm.initializeUser()
+fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavController) {
     val token = stringResource(R.string.default_web_client_id)
     val context = LocalContext.current
     val loggedInUser: FirebaseUser? by vm.user.observeAsState(null)
@@ -241,7 +239,19 @@ fun MainScreen(navController: NavController) {
     val userIsInUsers by vm.userIsInUsers.observeAsState()
     var loading by remember { mutableStateOf(true) }
 
+    val launcher = googleRememberFirebaseAuthLauncher(
+        onAuthComplete = {
+            vm.setUser(it.user)
+            Log.d("authenticated", "MainScreen: ${vm.fireBaseAuth.currentUser}")
+        },
+        onAuthError = {
+            vm.setUser(null)
+            Log.d("authenticated", "MainScreen: ${it.message}")
+        }
+    )
+
     LaunchedEffect(Unit) {
+        vm.setUser(vm.fireBaseAuth.currentUser)
         launch(Dispatchers.Default) {
             delay(1000)
             loading = false
@@ -280,9 +290,7 @@ fun MainScreen(navController: NavController) {
 
     LaunchedEffect(gameStatus) {
         gameStatus?.let {
-            println("gameId $gameId")
             gameId ?: return@LaunchedEffect
-            println("gameStatus $it")
             when (it) {
                 LobbyStatus.CREATED.value -> {
                     navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
@@ -297,17 +305,6 @@ fun MainScreen(navController: NavController) {
         }
     }
 
-    val launcher = googleRememberFirebaseAuthLauncher(
-        onAuthComplete = {
-            vm.setUser(it.user)
-            Log.d("authenticated", "MainScreen: ${auth.currentUser}")
-        },
-        onAuthError = {
-            vm.setUser(null)
-            Log.d("authenticated", "MainScreen: ${it.message}")
-        }
-    )
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -315,33 +312,12 @@ fun MainScreen(navController: NavController) {
     ) {
 
         if (loggedInUser == null && !loading) {
-            CreateUserForm(
+            LoginForm(
                 model = vm,
-                auth = auth,
-                navController = navController
+                navController = navController,
+                token = token,
+                launcher = launcher
             )
-            Spacer(modifier = Modifier.height(20.dp))
-            Button(
-                onClick = {
-                    val gso =
-                        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                            .requestIdToken(token)
-                            .requestEmail()
-                            .build()
-                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                    launcher.launch(googleSignInClient.signInIntent)
-                },
-                colors = ButtonDefaults.buttonColors(Color.White)
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.google_logo),
-                    contentDescription = "Google logo"
-                )
-                Text(
-                    "Sign in with google", fontSize = 17.sp
-                )
-            }
-
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
@@ -355,97 +331,47 @@ fun MainScreen(navController: NavController) {
     }
 }
 
-@Composable
-fun CreateUserForm(
-    model: AuthenticationViewModel = viewModel(),
-    auth: FirebaseAuth,
-    navController: NavController
-) {
-    var email by remember { mutableStateOf(TextFieldValue("")) }
-    var password by remember { mutableStateOf(TextFieldValue("")) }
-    val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
-    val snackBarHostState = remember { SnackbarHostState() }
+class AuthenticationViewModel() : ViewModel() {
 
-    Card(
-        modifier = Modifier
-            .padding(horizontal = 30.dp)
-            .background(Color.White)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(30.dp),
-        ) {
-            OutlinedTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() }),
-                label = { Text(text = "Email") },
-                placeholder = { Text(text = "Email") },
-                //modifier = Modifier.weight(0.5F)
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(
-                    onDone = { focusManager.clearFocus() }),
-                label = { Text(text = "Password") },
-                placeholder = { Text(text = "Password") },
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                CustomButton(
-                    onClick = {
-                        if (email.text == "" || password.text == "") {
-                            scope.launch {
-                                snackBarHostState.showSnackbar(
-                                    "Please give an email and a password",
-                                    "!",
-                                    SnackbarDuration.Short,
-                                )
-                            }
-                        } else {
-                            auth.createUserWithEmailAndPassword(
-                                email.text,
-                                password.text
-                            )
-                                .addOnCompleteListener() {
-                                    model.setUser(auth.currentUser)
-                                }
-                        }
-                    }, text = "Create an account"
-                )
-            }
-        }
-    }
-}
-
-class AuthenticationViewModel(auth: FirebaseAuth) : ViewModel() {
-
-    var fireBaseAuth = auth
+    var fireBaseAuth = Firebase.auth
     var user = MutableLiveData<FirebaseUser>(null)
     var userIsInUsers = MutableLiveData<Boolean>()
+    var emailValidationError = MutableLiveData<Boolean>()
+    var emailIsAvailable = MutableLiveData<Boolean>()
+    var passwordValidationError = MutableLiveData<Boolean>()
     var firestore = FirebaseHelper
     val currentGameId = MutableLiveData<String>()
     val gameStatus = MutableLiveData<Int>()
 
+//    fun validateEmailAndPassword(email: String, password: String) {
+//        if (!isEmailValid(email)) {
+//            emailValidationError.postValue(true)
+//        } else
+//            emailValidationError.postValue(false)
+//        if (!isPasswordValid(password)) {
+//            passwordValidationError.postValue(true)
+//        } else {
+//            passwordValidationError.postValue(false)
+//        }
+//    }
+
+    fun validateEmail(email: String) {
+        if (!isEmailValid(email)) {
+            emailValidationError.postValue(true)
+        } else
+            emailValidationError.postValue(false)
+    }
+
+    fun validatePassword(password: String) {
+        if (!isPasswordValid(password)) {
+            passwordValidationError.postValue(true)
+        } else {
+            passwordValidationError.postValue(false)
+        }
+    }
+
     fun updateUserDoc(userId: String, changeMap: Map<String, Any>) =
         firestore.updateUser(userId, changeMap)
-
-    fun initializeUser() {
-        user.value = fireBaseAuth.currentUser
-    }
 
     fun setUser(firebaseUser: FirebaseUser?) {
         user.value = firebaseUser
