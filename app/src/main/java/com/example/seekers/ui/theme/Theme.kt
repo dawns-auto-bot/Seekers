@@ -5,17 +5,20 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+
 
 private val DarkColorPalette = darkColors(
-    primary = TurquoiseGreen,
-    primaryVariant = TurquoiseGreen,
-    secondary = TurquoiseGreen
+    primary = Raisin,
+    primaryVariant = Raisin,
+    secondary = Emerald
 )
 
 private val LightColorPalette = lightColors(
-    primary = TurquoiseGreen,
-    primaryVariant = TurquoiseGreen,
-    secondary = TurquoiseGreen,
+    primary = Raisin,
+    primaryVariant = Raisin,
+    secondary = Emerald,
 
     /* Other default colors to override
     background = Color.White,
@@ -29,6 +32,11 @@ private val LightColorPalette = lightColors(
 
 @Composable
 fun SeekersTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val systemUiController = rememberSystemUiController()
+    systemUiController.setSystemBarsColor(
+        color = Raisin
+    )
+
     val colors = if (darkTheme) {
         DarkColorPalette
     } else {

@@ -8,6 +8,7 @@ import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.ActivityResult
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -34,8 +35,11 @@ import com.example.seekers.general.CustomButton
 import com.example.seekers.general.CustomOutlinedTextField
 import com.example.seekers.general.isEmailValid
 import com.example.seekers.general.isPasswordValid
+import com.example.seekers.ui.theme.Raisin
+import com.example.seekers.ui.theme.avatarBackground
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginForm(
@@ -63,7 +67,15 @@ fun LoginForm(
         modifier = Modifier
             .padding(30.dp),
     ) {
-        Text(text = "Welcome Back", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Image(
+                painter = painterResource(R.drawable.seekers_ver2),
+                contentDescription = "seekers",
+                modifier = Modifier
+                    .padding(30.dp)
+                    .size(150.dp)
+            )
+
+        Text(text = "Welcome back!", fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Text(text = "Sign in to continue", fontSize = 16.sp, color = Color.LightGray)
         Spacer(modifier = Modifier.height(40.dp))
         if(invalidCredentials) {

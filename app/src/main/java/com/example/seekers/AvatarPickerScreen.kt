@@ -15,7 +15,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -25,9 +24,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
-import com.example.seekers.ui.theme.Ivory
+import com.example.seekers.ui.theme.Powder
+import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.ui.theme.avatarBackground
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
@@ -63,7 +62,7 @@ fun AvatarPickerScreen(
                 }
             })
         },
-        modifier = Modifier.fillMaxSize().background(color = Ivory)
+        modifier = Modifier.fillMaxSize().background(color = Powder)
     ) {
         Column(
             modifier = Modifier
@@ -76,7 +75,7 @@ fun AvatarPickerScreen(
             Spacer(modifier = Modifier.height(32.dp))
             Card(
                 shape = CircleShape,
-                border = BorderStroke(2.dp, Color.White),
+                border = BorderStroke(2.dp, Raisin),
                 backgroundColor = avatarBackground,
                 modifier = Modifier
                     .clickable {
@@ -142,7 +141,7 @@ fun BottomSheet(onPick: (Int) -> Unit) {
             items(avatarList) { avatar ->
                 Card(
                     shape = CircleShape,
-                    border = BorderStroke(2.dp, Color.White),
+                    border = BorderStroke(2.dp, Raisin),
                     backgroundColor = avatarBackground,
                     modifier = Modifier
                         .padding(10.dp)

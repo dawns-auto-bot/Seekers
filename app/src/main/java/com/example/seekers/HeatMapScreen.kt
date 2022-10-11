@@ -14,11 +14,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,16 +41,21 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.seekers.general.CustomButton
 import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.QRScanner
 import com.example.seekers.general.generateQRCode
 import com.example.seekers.general.toGrayscale
-import com.example.seekers.ui.theme.DarkerGreen
-import com.example.seekers.ui.theme.Ivory
+import com.example.seekers.ui.theme.Powder
 import com.example.seekers.ui.theme.Raisin
-import com.example.seekers.general.*
-import com.google.android.gms.location.*
-import com.google.android.gms.maps.model.*
+import com.example.seekers.ui.theme.Emerald
+import com.example.seekers.ui.theme.Mango
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.google.maps.android.compose.*
@@ -62,7 +63,6 @@ import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.ktx.utils.withSphericalOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.example.seekers.ui.theme.TurquoiseGreen
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -192,7 +192,7 @@ fun HeatMapScreen(
     }
 
     LaunchedEffect(eliminatedPlayers) {
-        eliminatedPlayers.find { it.playerId == FirestoreHelper.uid!! }?.let {
+        eliminatedPlayers.find { it.playerId == FirebaseHelper.uid!! }?.let {
             vm.stopService(context)
         }
     }
@@ -252,13 +252,13 @@ fun HeatMapScreen(
         drawerContent = {
             Surface(
                 shape = RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp),
-                color = TurquoiseGreen,
+                color = Emerald,
                 border = BorderStroke(1.dp, Raisin),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(color = TurquoiseGreen)
+                        .background(color = Emerald)
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -326,7 +326,7 @@ fun HeatMapScreen(
                         })
                     IconButton(
                         onClick = {
-                            vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
+                            vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
                             vm.stopService(context)
                             navController.navigate(NavRoutes.StartGame.route)
                         },
@@ -349,11 +349,12 @@ fun HeatMapScreen(
                 floatingActionButtonPosition = FabPosition.Center,
                 isFloatingActionButtonDocked = true,
                 floatingActionButton = {
+
                     FloatingActionButton(
                         elevation = FloatingActionButtonDefaults.elevation(8.dp),
-                        modifier = Modifier.border(BorderStroke(0.dp, Raisin), shape = CircleShape),
+                        modifier = Modifier.border(BorderStroke(1.dp, Raisin), shape = CircleShape),
                         shape = CircleShape,
-                        backgroundColor = TurquoiseGreen,
+                        backgroundColor = Emerald,
                         contentColor = Raisin,
                         onClick = {
                             scope.launch { drawerState.open() }
@@ -483,7 +484,7 @@ fun HeatMapScreen(
                                         },
                                         sendPic = {
                                             vm.sendSelfie(
-                                                FirestoreHelper.uid!!,
+                                                FirebaseHelper.uid!!,
                                                 gameId,
                                                 it
                                             )
@@ -580,7 +581,7 @@ fun HeatMap(
             Circle(
                 center = center,
                 radius = radius.toDouble(),
-                strokeColor = Color(0x8DBDA500),
+                strokeColor = Emerald,
             )
         }
 
@@ -728,11 +729,11 @@ fun GameTimer(modifier: Modifier = Modifier, vm: HeatMapViewModel) {
     countdown?.let {
         Card(
             modifier = modifier,
-            backgroundColor = TurquoiseGreen,
+            backgroundColor = Emerald,
             shape = RoundedCornerShape(25.dp)
         ) {
             Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.Center) {
-                Text(text = secondsToText(it), color = Color.White, fontSize = 20.sp)
+                Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
             }
         }
 
@@ -790,7 +791,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    val firestore = FirestoreHelper
+    val firestore = FirebaseHelper
     val lobby = MutableLiveData<Lobby>()
     val radius = Transformations.map(lobby) {
         it.radius
@@ -805,7 +806,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     val players = MutableLiveData<List<Player>>()
     val isSeeker = MutableLiveData<Boolean>()
     val playersWithoutSelf = Transformations.map(players) { players ->
-        players.filter { it.playerId != FirestoreHelper.uid!! }
+        players.filter { it.playerId != FirebaseHelper.uid!! }
     }
     val heatPositions = Transformations.map(playersWithoutSelf) { players ->
         players.filter { it.inGameStatus == InGameStatus.PLAYER.value }
@@ -1031,11 +1032,11 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 //source: https://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds
 fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
     val WORLD_DIM = Size(256, 256)
-    val ZOOM_MAX = 21.toDouble();
+    val ZOOM_MAX = 21.toDouble()
 
     fun latRad(lat: Double): Double {
-        val sin = sin(lat * Math.PI / 180);
-        val radX2 = ln((1 + sin) / (1 - sin)) / 2;
+        val sin = sin(lat * Math.PI / 180)
+        val radX2 = ln((1 + sin) / (1 - sin)) / 2
         return max(min(radX2, Math.PI), -Math.PI) / 2
     }
 
@@ -1043,20 +1044,20 @@ fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
         return floor(ln(mapPx / worldPx / fraction) / ln(2.0))
     }
 
-    val ne = bounds.northeast;
-    val sw = bounds.southwest;
+    val ne = bounds.northeast
+    val sw = bounds.southwest
 
-    val latFraction = (latRad(ne.latitude) - latRad(sw.latitude)) / Math.PI;
+    val latFraction = (latRad(ne.latitude) - latRad(sw.latitude)) / Math.PI
 
-    val lngDiff = ne.longitude - sw.longitude;
+    val lngDiff = ne.longitude - sw.longitude
     val lngFraction = if (lngDiff < 0) {
         (lngDiff + 360) / 360
     } else {
         (lngDiff / 360)
     }
 
-    val latZoom = zoom(mapDim.height, WORLD_DIM.height, latFraction);
-    val lngZoom = zoom(mapDim.width, WORLD_DIM.width, lngFraction);
+    val latZoom = zoom(mapDim.height, WORLD_DIM.height, latFraction)
+    val lngZoom = zoom(mapDim.width, WORLD_DIM.width, lngFraction)
 
     return minOf(latZoom, lngZoom, ZOOM_MAX)
 }

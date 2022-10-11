@@ -2,19 +2,16 @@ package com.example.seekers.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple200 = Color(0xFFBB86FC)
-val Purple500 = Color(0xFF6200EE)
-val Purple700 = Color(0xFF3700B3)
-val Teal200 = Color(0xFF03DAC5)
 // val avatarBackground = Color(0xFFF1B390)
-val avatarBackground = Color(0xFFB1D8B7)
+val avatarBackground = Color(0xFFb6f298)
+val emailAvailable = Color(0xFFb6f298)
 
-// Palette
-
-val TurquoiseGreen = Color(0xFFB1D8B7)
-val DarkerGreen = Color(0xFF83B18A)
-val BrightRed = Color(0xFF96031A)
-val Ivory = Color(0xFFFCFFFC)
+val Emerald = Color(0xFFb6f298)
+val EmeraldTransparent1 = Color(0x8CB6F298)
+val EmeraldTransparent2 = Color(0x19B6F298)
+val Mango = Color(0xFFF5853F)
+val SizzlingRed = Color(0xFFEB5160)
+val Powder = Color(0xFFF0F4EF)
 val Raisin = Color(0xFF2d2a32)
 
-val emailAvailable = Color(0xFF228B22)
+val oldGreen = Color(0xFF83B18A)

@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -41,19 +40,16 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.budiyev.android.codescanner.*
-import com.example.seekers.ui.theme.emailAvailable
 import com.budiyev.android.codescanner.AutoFocusMode
 import com.budiyev.android.codescanner.CodeScanner
 import com.budiyev.android.codescanner.CodeScannerView
 import com.budiyev.android.codescanner.DecodeCallback
 import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
-import com.example.seekers.ui.theme.TurquoiseGreen
-import com.example.seekers.ui.theme.BrightRed
-import com.example.seekers.ui.theme.Raisin
+import com.example.seekers.ui.theme.*
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
+import java.util.*
 
 fun generateQRCode(data: String): Bitmap {
     val fileOut = ByteArrayOutputStream()
@@ -117,16 +113,16 @@ fun CustomOutlinedTextField(
         onValueChange = onValueChange,
         isError = isError,
         colors = TextFieldDefaults.outlinedTextFieldColors(
-            errorBorderColor = Color.Red,
-            errorLabelColor = Color.Red,
-            errorCursorColor = Color.Red,
-            errorLeadingIconColor = Color.Red,
-            errorTrailingIconColor = Color.Red,
-            focusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            focusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            unfocusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            unfocusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            trailingIconColor = if (emailIsAvailable == true) emailAvailable else Color.Gray
+            errorBorderColor = SizzlingRed,
+            errorLabelColor = SizzlingRed,
+            errorCursorColor = SizzlingRed,
+            errorLeadingIconColor = SizzlingRed,
+            errorTrailingIconColor = SizzlingRed,
+            focusedBorderColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            focusedLabelColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            unfocusedBorderColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            unfocusedLabelColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            trailingIconColor = if (emailIsAvailable == true) emailAvailable else Raisin
         ),
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Done,
@@ -193,9 +189,9 @@ fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Uni
             .width(width.dp)
             .height(50.dp),
         shape = RoundedCornerShape(15),
-        colors = ButtonDefaults.outlinedButtonColors(TurquoiseGreen, contentColor = Raisin)
+        colors = ButtonDefaults.outlinedButtonColors(Emerald, contentColor = Raisin)
     ) {
-        Text(text = text)
+        Text(text = text.uppercase(Locale.ROOT))
     }
 }
 
@@ -208,10 +204,10 @@ fun LogOutButton(modifier: Modifier = Modifier, text: String, onClick: () -> Uni
             .width(150.dp)
             .height(50.dp),
         shape = RoundedCornerShape(15),
-        colors = ButtonDefaults.outlinedButtonColors(BrightRed, contentColor = Color.White)
+        colors = ButtonDefaults.outlinedButtonColors(SizzlingRed, contentColor = Color.White)
     ) {
         Icon(Icons.Default.ArrowBack, contentDescription = "", tint = Color.White)
-        Text(text = text)
+        Text(text = text.uppercase(Locale.ROOT))
     }
 }
 
@@ -223,12 +219,14 @@ fun IconButton(
     buttonColor: Color,
     onClick: () -> Unit
 ) {
+
     Button(
+        border = BorderStroke(1.dp, Raisin),
         onClick = onClick,
         modifier = modifier
-            .height(50.dp)
-            .clip(RoundedCornerShape(5.dp)),
-        colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Color.White),
+            .height(50.dp),
+        shape = RoundedCornerShape(15),
+        colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Raisin),
     ) {
         Box(
             modifier = Modifier.fillMaxWidth(),
@@ -248,7 +246,7 @@ fun IconButton(
                     tint = Color.Unspecified
                 )
             }
-            Text(text = buttonText)
+            Text(text = buttonText.uppercase(Locale.ROOT))
         }
     }
 }
@@ -268,9 +266,9 @@ fun VerticalSlider(
         // Text(text = value.toString(), fontSize = 10.sp)
         Slider(
             colors = SliderDefaults.colors(
-                thumbColor = TurquoiseGreen,
-                activeTrackColor = TurquoiseGreen,
-                inactiveTrackColor = Color.LightGray
+                thumbColor = Emerald,
+                activeTrackColor = Emerald,
+                inactiveTrackColor = Raisin
             ),
             onValueChangeFinished = onValueChangeFinished,
             steps = steps,

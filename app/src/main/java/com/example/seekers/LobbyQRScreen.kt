@@ -1,11 +1,9 @@
 package com.example.seekers
 
 import android.graphics.Bitmap
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,14 +30,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.generateQRCode
-import com.example.seekers.ui.theme.BrightRed
+import com.example.seekers.ui.theme.SizzlingRed
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
@@ -132,10 +128,10 @@ fun LobbyQRScreen(
                         showLeaveDialog = true
                     }
                 }, colors = ButtonDefaults.buttonColors(
-                    backgroundColor = BrightRed,
+                    backgroundColor = SizzlingRed,
                     contentColor = Color.White
                 )) {
-                    Text(text = "Leave")
+                    Text(text = "LEAVE")
                 }
             },
             backgroundColor = Color.Transparent,
