@@ -11,6 +11,7 @@ import android.os.CountDownTimer
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -79,6 +80,7 @@ fun HeatMapScreen(
     val cameraPositionState = rememberCameraPositionState()
     var minZoom by remember { mutableStateOf(17F) }
     var showRadar by remember { mutableStateOf(false) }
+    var showLeaveGameDialog by remember { mutableStateOf(false) }
     var showQR by remember { mutableStateOf(false) }
     var showQRScanner by remember { mutableStateOf(false) }
     var showPlayerFound by remember { mutableStateOf(false) }
@@ -132,7 +134,6 @@ fun HeatMapScreen(
             )
         )
     }
-
     LaunchedEffect(Unit) {
         vm.getPlayers(gameId)
         vm.getLobby(gameId)
@@ -265,9 +266,7 @@ fun HeatMapScreen(
                         .padding(8.dp)
                 ) {
                     Button(onClick = {
-                        vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
-                        vm.stopService(context)
-                        navController.navigate(NavRoutes.StartGame.route)
+                        showLeaveGameDialog = true
                     }) {
                         Text(text = "Leave")
                     }
@@ -337,6 +336,14 @@ fun HeatMapScreen(
                     }
                 }
 
+                if (showLeaveGameDialog) {
+                    LeaveGameDialog(onDismissRequest = { showLeaveGameDialog = false }, onConfirm = {
+                        vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
+                        vm.stopService(context)
+                        navController.navigate(NavRoutes.StartGame.route)
+                    })
+                }
+
                 selfie?.let {
                     if (showSendSelfie) {
                         SendSelfieDialog(
@@ -361,6 +368,9 @@ fun HeatMapScreen(
                             selfieLauncher.launch(null)
                         }
                     }
+                }
+                BackHandler(enabled = true) {
+                    showLeaveGameDialog = true
                 }
             } else {
                 Text(text = "Location permission needed")
@@ -597,7 +607,6 @@ fun GameTimer(modifier: Modifier = Modifier, vm: HeatMapViewModel) {
                 Text(text = secondsToText(it))
             }
         }
-
     }
 }
 

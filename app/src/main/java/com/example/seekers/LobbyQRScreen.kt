@@ -2,6 +2,7 @@ package com.example.seekers
 
 import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -203,6 +204,13 @@ fun LobbyQRScreen(
                 )
                 vm.updateLobby(changeMap, gameId)
             })
+        }
+        BackHandler(enabled = true) {
+            if (isCreator == true) {
+                showDismissDialog = true
+            } else {
+                showLeaveDialog = true
+            }
         }
     }
 
