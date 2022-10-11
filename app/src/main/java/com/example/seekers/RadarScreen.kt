@@ -184,7 +184,6 @@ fun FoundPlayerCard(
 
 class RadarViewModel() : ViewModel() {
     val firestore = FirebaseHelper
-    val playersNearByCount = MutableLiveData<Int>()
     private val _scanningStatus = MutableLiveData<Int>()
     val scanningStatus: LiveData<Int> = _scanningStatus
     val players = MutableLiveData(listOf<Pair<Player, Float>>())

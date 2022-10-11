@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Color
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.Priority
 import java.util.*
@@ -14,6 +16,7 @@ object Notifications {
     private var id: Int = UUID.randomUUID().hashCode()
     private val CHANNEL_ID = "LOCATION_SERVICE"
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun createNotificationChannel(
         context: Context,
         channelId: String = CHANNEL_ID,

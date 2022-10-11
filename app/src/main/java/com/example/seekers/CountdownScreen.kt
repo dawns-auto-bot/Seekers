@@ -1,5 +1,6 @@
 package com.example.seekers
 
+import android.media.MediaPlayer
 import android.os.CountDownTimer
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
@@ -33,13 +34,16 @@ fun CountdownScreen(
 ) {
     val initialValue by vm.initialValue.observeAsState()
     val countdown by vm.countdown.observeAsState()
-    val context = LocalContext.current
     var timesUp by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var countdownTimer: CountDownTimer? by remember { mutableStateOf(null) }
+    val mediaPlayerHidingPhaseMusic: MediaPlayer = MediaPlayer.create(context, R.raw.countdown_music)
+    val mediaPlayerCountdown : MediaPlayer = MediaPlayer.create(context, R.raw.counting_down)
 
     LaunchedEffect(Unit) {
         vm.getInitialValue(gameId)
+        mediaPlayerHidingPhaseMusic.start()
     }
 
     LaunchedEffect(initialValue) {
@@ -52,6 +56,12 @@ fun CountdownScreen(
                         return
                     }
                     vm.updateCountdown((p0 / 1000).toInt())
+                    if((p0 / 1000).toInt() == 10) {
+                    scope.launch {
+                            mediaPlayerCountdown.start()
+                        }
+                    }
+
                 }
 
                 override fun onFinish() {
@@ -62,6 +72,8 @@ fun CountdownScreen(
                             mapOf(Pair("status", LobbyStatus.ACTIVE.value)),
                             gameId
                         )
+                        mediaPlayerHidingPhaseMusic.stop()
+                        mediaPlayerCountdown.stop()
                         navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
                     }
                 }
@@ -82,7 +94,6 @@ fun CountdownScreen(
             CountdownTimerUI(countdown = countdown!!, initialTime = initialValue!!)
         }
     }
-
 }
 
 @Composable
