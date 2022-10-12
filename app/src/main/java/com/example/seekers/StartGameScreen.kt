@@ -192,6 +192,91 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
     }
 }
 
+@Composable
+fun LogOutDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        title = { Text(text = "Logging out?") },
+        text = { Text(text = "Are you sure you want to log out?") },
+        onDismissRequest = onDismissRequest,
+        dismissButton = {
+            Button(onClick = { onDismissRequest() }) {
+                Text(text = "Cancel")
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm() }) {
+                Text(text = "Log Out")
+            }
+        }
+    )
+}
+
+class PermissionsViewModel : ViewModel() {
+    val coarseLocPerm = MutableLiveData<Boolean>()
+    val fineLocPerm = MutableLiveData<Boolean>()
+    val backgroundLocPerm = MutableLiveData<Boolean>()
+    val cameraPerm = MutableLiveData<Boolean>()
+    val activityRecPerm = MutableLiveData<Boolean>()
+    val foregroundServPerm = MutableLiveData<Boolean>()
+
+    fun getLiveData(requiredPermission: RequiredPermission): MutableLiveData<Boolean> {
+        return when (requiredPermission) {
+            RequiredPermission.COARSE_LOCATION -> coarseLocPerm
+            RequiredPermission.FINE_LOCATION -> fineLocPerm
+            RequiredPermission.BACKGROUND_LOCATION -> backgroundLocPerm
+            RequiredPermission.CAMERA -> cameraPerm
+            RequiredPermission.ACTIVITY_RECOGNITION -> activityRecPerm
+            RequiredPermission.FOREGROUND_SERVICE -> foregroundServPerm
+        }
+    }
+
+    fun checkAllPermissions(context: Context) {
+        RequiredPermission.values().forEach {
+            getLiveData(it).value = isPermissionGranted(context, it.value)
+        }
+    }
+
+    fun allPermissionsAllowed(): Boolean {
+        return coarseLocPerm.value == true
+                && fineLocPerm.value == true
+                && backgroundLocPerm.value == true
+                && cameraPerm.value == true
+                && activityRecPerm.value == true
+                && foregroundServPerm.value == true
+    }
+}
+
+enum class RequiredPermission(val value: String, val text: String, val explanation: String) {
+    COARSE_LOCATION(
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        "\uD83D\uDCCD Coarse location",
+        "to locate other players on the map"
+    ),
+    FINE_LOCATION(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        "\uD83D\uDCCD Fine location",
+        "to get accurate locations"
+    ),
+    BACKGROUND_LOCATION(
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+        "\uD83D\uDCCD Background location (All the time)",
+        "to send locations even when your screen is off"
+    ),
+    CAMERA(
+        Manifest.permission.CAMERA, "\uD83D\uDCF7 Camera",
+        "to scan QR codes and take pictures"
+    ),
+    ACTIVITY_RECOGNITION(
+        Manifest.permission.ACTIVITY_RECOGNITION,
+        "\uD83D\uDC5F Activity recognition",
+        "to count your steps"
+    ),
+    FOREGROUND_SERVICE(
+        Manifest.permission.FOREGROUND_SERVICE, "\uD83D\uDD14 Foreground Service",
+        "to keep the game on even when your screen is off"
+    ),
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PermissionsDialog(onDismiss: () -> Unit, vm: PermissionsViewModel) {

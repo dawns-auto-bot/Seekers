@@ -46,11 +46,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.seekers.general.CustomButton
+import com.example.seekers.general.*
 import com.example.seekers.general.QRCodeComponent
-import com.example.seekers.general.QRScanner
-import com.example.seekers.general.generateQRCode
-import com.example.seekers.general.toGrayscale
 import com.example.seekers.ui.theme.Powder
 import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.ui.theme.Emerald
@@ -337,7 +334,6 @@ fun HeatMapScreen(
                                     contentDescription = "Radar",
                                     tint = Raisin
                                 )
-                                // Text(text = "Radar", color = Color.White)
                             }
                         })
                     IconButton(
