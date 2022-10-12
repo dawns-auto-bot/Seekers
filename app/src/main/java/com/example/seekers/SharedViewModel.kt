@@ -5,9 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 
 class SharedViewModel(application: Application): AndroidViewModel(application) {
-    val locService = MutableLiveData<LocationService>()
+    val locService = MutableLiveData<ForegroundService>()
 
-    fun updateLocService(newVal: LocationService) {
+    fun updateLocService(newVal: ForegroundService) {
         locService.value = newVal
     }
 }

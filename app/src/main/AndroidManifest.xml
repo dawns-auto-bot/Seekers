@@ -25,7 +25,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Seekers"
         tools:targetApi="31">
-        <service android:name=".LocationService" />
+        <service android:name=".ForegroundService" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

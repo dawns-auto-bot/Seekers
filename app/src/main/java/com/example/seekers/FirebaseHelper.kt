@@ -10,6 +10,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.ktx.storage
 import java.io.ByteArrayOutputStream
 import java.io.Serializable
@@ -106,7 +107,7 @@ object FirebaseHelper {
         return lobbiesRef.document(gameId).collection("players").document(playerId)
     }
 
-    fun updatePlayerLocation(changeMap: Map<String, Any>, playerId: String, gameId: String) {
+    fun updatePlayer(changeMap: Map<String, Any>, playerId: String, gameId: String) {
         val playerRef = lobbiesRef.document(gameId).collection("players").document(playerId)
         playerRef.update(changeMap)
             .addOnSuccessListener {
@@ -128,7 +129,7 @@ object FirebaseHelper {
             }
     }
 
-    fun sendSelfie(playerId: String, gameId: String, selfie: Bitmap) {
+    fun sendSelfie(playerId: String, gameId: String, selfie: Bitmap, nickname: String) {
         val storageRef = Firebase.storage.reference.child("lobbies").child(gameId).child(playerId)
         val baos = ByteArrayOutputStream()
         selfie.compress(Bitmap.CompressFormat.JPEG, 100, baos)
@@ -138,7 +139,7 @@ object FirebaseHelper {
                 Log.d(TAG, "sendSelfie: picture uploaded ($playerId)")
                 val news = News(
                     picId = playerId,
-                    text = "$playerId was caught!",
+                    text = "$nickname was caught!",
                     timestamp = Timestamp.now()
                 )
                 addFoundNews(news = news, gameId)
@@ -158,6 +159,9 @@ object FirebaseHelper {
             .orderBy("timestamp", Query.Direction.DESCENDING)
     }
 
+    fun getSelfieImage(gameId: String, picId: String): StorageReference {
+        return Firebase.storage.reference.child("lobbies").child(gameId).child(picId)
+    }
 }
 
 class Lobby(
@@ -178,13 +182,14 @@ class Player(
     val inLobbyStatus: Int = 0,
     val inGameStatus: Int = 0,
     var distanceStatus: Int = 0,
-    val location: GeoPoint = GeoPoint(0.0, 0.0)
+    val location: GeoPoint = GeoPoint(0.0, 0.0),
+    val timeOfElimination: Timestamp = Timestamp.now()
 ) : Serializable
 
 class News(
     val picId: String = "",
     val text: String = "",
-    timestamp: Timestamp = Timestamp.now(),
+    val timestamp: Timestamp = Timestamp.now(),
 ) : Serializable
 
 enum class InLobbyStatus(val value: Int) {

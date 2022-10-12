@@ -46,6 +46,7 @@ import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -85,7 +86,10 @@ fun LobbyQRScreen(
                     navController.navigate(NavRoutes.StartGame.route)
                 }
                 LobbyStatus.COUNTDOWN.value -> {
-                    navController.navigate(NavRoutes.Countdown.route + "/$gameId")
+                    scope.launch {
+                        delay(1000)
+                        navController.navigate(NavRoutes.Countdown.route + "/$gameId")
+                    }
                 }
                 LobbyStatus.ACTIVE.value -> {
                     navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
@@ -439,9 +443,7 @@ fun QRDialog(
             ) {
                 QRCodeComponent(bitmap = bitmap)
             }
-
         }
-
     }
 
 }
