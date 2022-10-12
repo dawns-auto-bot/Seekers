@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -81,7 +83,11 @@ fun LobbyQRScreen(
             when (it.status) {
                 LobbyStatus.DELETED.value -> {
                     if (isCreator != true) {
-                        Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
+                        Toast.makeText(
+                            context,
+                            "The lobby was closed by the host",
+                            Toast.LENGTH_LONG
+                        )
                             .show()
                     }
                     vm.updateUser(FirebaseHelper.uid!!, mapOf(Pair("currentGameId", "")))
@@ -112,24 +118,24 @@ fun LobbyQRScreen(
     }
 
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Scan QR to join!",
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(15.dp)
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            IconButton(
+                onClick = {
                     showQRDialog = true
-                }) {
-                    Icon(Icons.Outlined.QrCode2, "QR", modifier = Modifier.size(40.dp))
-                }
-            },
-            actions = {
-                Button(onClick = {
+                },
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
+                Icon(Icons.Outlined.QrCode2, "QR", modifier = Modifier.size(40.dp))
+            }
+            Text(
+                text = "Scan QR to join!",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.Center)
+            )
+            Button(
+                onClick = {
                     if (isCreator == true) {
                         showDismissDialog = true
                     } else {
@@ -137,14 +143,16 @@ fun LobbyQRScreen(
                     }
                 }, colors = ButtonDefaults.buttonColors(
                     backgroundColor = SizzlingRed,
-                    contentColor = Color.White
-                )) {
-                    Text(text = "LEAVE")
-                }
-            },
-            backgroundColor = Color.Transparent,
-            elevation = 0.dp
-        )
+                    contentColor = Color.White,
+                ),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(0.dp, 0.dp, 5.dp, 0.dp)
+            ) {
+                Text(text = "LEAVE")
+            }
+        }
+
     }
     ) {
         Column(
@@ -274,7 +282,8 @@ fun EditRulesDialog(
                         Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
                             CustomButton(text = "Save") {
                                 if (maxPlayers != null && timeLimit != null && radius != null && countdown != null && center != null) {
-                                    val centerGeoPoint = GeoPoint(center!!.latitude, center!!.longitude)
+                                    val centerGeoPoint =
+                                        GeoPoint(center!!.latitude, center!!.longitude)
                                     val changeMap = mapOf(
                                         Pair("center", centerGeoPoint),
                                         Pair("maxPlayers", maxPlayers!!),
@@ -287,7 +296,11 @@ fun EditRulesDialog(
                                         .show()
                                     onDismissRequest()
                                 } else {
-                                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT)
+                                    Toast.makeText(
+                                        context,
+                                        "Please fill all fields",
+                                        Toast.LENGTH_SHORT
+                                    )
                                         .show()
                                 }
                             }
