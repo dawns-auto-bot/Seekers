@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.hardware.Sensor
@@ -48,18 +49,14 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.*
 import com.example.seekers.general.QRCodeComponent
-import com.example.seekers.ui.theme.Powder
 import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.ui.theme.Emerald
-import com.example.seekers.ui.theme.Mango
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.Priority
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -67,7 +64,6 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.google.maps.android.compose.*
 import com.google.maps.android.heatmaps.HeatmapTileProvider
-import com.google.maps.android.ktx.utils.withSphericalOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.ZoneId
@@ -115,10 +111,6 @@ fun HeatMapScreen(
     var showSendSelfie by remember { mutableStateOf(false) }
     var showNews by remember { mutableStateOf(false) }
     var circleCoords by remember { mutableStateOf(listOf<LatLng>()) }
-    val stepCounterVewModel = StepCounterVewModel(context)
-    val steps by stepCounterVewModel.steps.observeAsState()
-
-    getActivityRecognitionPermission(context)
 
     val locationPermissionLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
@@ -188,12 +180,12 @@ fun HeatMapScreen(
         lobbyStatus?.let {
             when (it) {
                 LobbyStatus.ACTIVE.value ->{
-                    stepCounterVewModel.startStepCounter()
+                    vm.startStepCounter()
                 }
 
                 LobbyStatus.FINISHED.value -> {
-                    stepCounterVewModel.stopStepCounter()
-                    Log.d("steps", steps.toString())
+                    vm.stopStepCounter()
+
                     Toast.makeText(context, "The game has ended", Toast.LENGTH_LONG).show()
                     /*
                     * Steps
@@ -1119,6 +1111,68 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
+    var steps = MutableLiveData(0)
+    var distance = MutableLiveData(0.0F)
+    var running  = MutableLiveData(false)
+    val stepLength = 0.78F
+
+    var initialSteps = MutableLiveData(-2)
+    private val sensorManager: SensorManager = application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    val stepCounterSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+    private val sharedPreference: SharedPreferences =  application.getSharedPreferences("statistics",Context.MODE_PRIVATE)
+    private var sharedPreferenceEditor: SharedPreferences.Editor = sharedPreference.edit()
+
+    //https://www.geeksforgeeks.org/proximity-sensor-in-android-app-using-jetpack-compose/
+    private val sensorEventListener = object: SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            if(event.sensor == stepCounterSensor){
+                if(running.value == true){
+                    event.values.firstOrNull()?.toInt().let { newSteps ->
+                        if (initialSteps.value == -2) {
+                            initialSteps.value = newSteps!!
+                        }
+                        val currentSteps = newSteps?.minus(initialSteps.value!!)
+                        if (currentSteps != null) {
+                            steps.value = currentSteps
+                            Log.d("steps", steps.value.toString())
+                        }
+                    }
+                }
+            }
+        }
+
+
+        override fun onAccuracyChanged(sensor: Sensor?, p1: Int) {
+            Log.d("something", "something")
+        }
+    }
+
+    fun startStepCounter(){
+        running.value=true
+        sensorManager.registerListener(
+            sensorEventListener,
+            stepCounterSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        //Toast.makeText(context, "Start", Toast.LENGTH_SHORT).show()
+    }
+
+    fun stopStepCounter(){
+        running.value=false
+        sensorManager.unregisterListener(sensorEventListener)
+        steps.value?.let { sharedPreferenceEditor.putInt("step count", it) }
+        sharedPreferenceEditor.commit()
+        val value = sharedPreference.getInt("step count", 0)
+        Log.d("steps from shared preferences", value.toString())
+
+        //Toast.makeText(context, "Stop", Toast.LENGTH_SHORT).show()
+        initialSteps.value = -2
+    }
+    fun countDistance(){
+        val length = stepLength.times(steps.value!!.toFloat())
+        distance.value=length
+    }
+
 }
 
 //source: https://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds
@@ -1152,62 +1206,4 @@ fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
     val lngZoom = zoom(mapDim.width, WORLD_DIM.width, lngFraction)
 
     return minOf(latZoom, lngZoom, ZOOM_MAX)
-}
-
-class StepCounterVewModel(context: Context): ViewModel(){
-    var steps = MutableLiveData("0")
-    var distance = MutableLiveData(0.0F)
-    var running  = MutableLiveData(false)
-    val stepLength = 0.78F
-
-    var initialSteps = MutableLiveData(-2)
-    private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    val stepCounterSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
-
-    //https://www.geeksforgeeks.org/proximity-sensor-in-android-app-using-jetpack-compose/
-    private val sensorEventListener = object: SensorEventListener {
-        override fun onSensorChanged(event: SensorEvent) {
-            if(event.sensor == stepCounterSensor){
-                if(running.value == true){
-                    event.values.firstOrNull()?.toInt().let { newSteps ->
-                        if (initialSteps.value == -2) {
-                            initialSteps.value = newSteps!!
-                        }
-                        val currentSteps = newSteps?.minus(initialSteps.value!!)
-                        if (currentSteps != null) {
-                            steps.value = currentSteps.toString()
-                            Log.d("steps", steps.value!!)
-                        }
-                    }
-                }
-                //steps.value = event.values[0]
-            }
-        }
-
-
-        override fun onAccuracyChanged(sensor: Sensor?, p1: Int) {
-            Log.d("something", "something")
-        }
-    }
-
-    fun startStepCounter(){
-        running.value=true
-        sensorManager.registerListener(
-            sensorEventListener,
-            stepCounterSensor,
-            SensorManager.SENSOR_DELAY_NORMAL
-        )
-        //Toast.makeText(context, "Start", Toast.LENGTH_SHORT).show()
-    }
-
-    fun stopStepCounter(){
-        running.value=false
-        sensorManager.unregisterListener(sensorEventListener)
-        //Toast.makeText(context, "Stop", Toast.LENGTH_SHORT).show()
-        initialSteps.value = -2
-    }
-    fun countDistance(){
-        val length = stepLength.times(steps.value!!.toFloat())
-        distance.value=length
-    }
 }
