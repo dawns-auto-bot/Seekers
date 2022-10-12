@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.seekers.general.AvatarIcon
+import java.util.*
 
 @Composable
 fun PlayerListButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -93,13 +94,7 @@ fun PlayerTile(player: Player) {
 
 @Composable
 fun StatusPill(inGameStatus: Int) {
-    val status = when (inGameStatus) {
-        InGameStatus.SEEKER.ordinal -> "seeker"
-        InGameStatus.PLAYER.ordinal -> "hiding"
-        InGameStatus.MOVING.ordinal -> "moving"
-        InGameStatus.ELIMINATED.ordinal -> "eliminated"
-        else -> "unknown"
-    }
+    val status = InGameStatus.values()[inGameStatus].name.lowercase(Locale.getDefault())
     val color = if (inGameStatus == InGameStatus.SEEKER.ordinal) Color.Red else Color.LightGray
 
     Card(shape = RoundedCornerShape(16.dp), backgroundColor = color) {

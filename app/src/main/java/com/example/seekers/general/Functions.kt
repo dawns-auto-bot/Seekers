@@ -1,15 +1,10 @@
 package com.example.seekers.general
 
-import android.Manifest
-import android.app.Activity
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.*
 import android.util.Log
+import android.util.Size
 import android.widget.FrameLayout
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -35,9 +30,6 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.budiyev.android.codescanner.*
 import com.example.seekers.ui.theme.*
 import com.google.android.gms.maps.model.LatLng
@@ -46,8 +38,7 @@ import com.google.maps.android.ktx.utils.withSphericalOffset
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 import java.util.*
-import kotlin.math.PI
-import kotlin.math.cos
+import kotlin.math.*
 
 fun generateQRCode(data: String): Bitmap {
     val fileOut = ByteArrayOutputStream()
@@ -59,42 +50,6 @@ fun generateQRCode(data: String): Bitmap {
     val imageBytes = fileOut.toByteArray()
     return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
 }
-
-fun getLocationPermission(context: Context) {
-    if ((ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) != PackageManager.PERMISSION_GRANTED)
-    ) {
-        ActivityCompat.requestPermissions(
-            context as Activity,
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-            0
-        )
-    }
-}
-
-fun getActivityRecognitionPermission(context: Context) {
-    if (ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACTIVITY_RECOGNITION
-        ) == PackageManager.PERMISSION_DENIED
-    ) {
-        ActivityCompat.requestPermissions(
-            context as Activity,
-            arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
-            1
-        )
-    }
-}
-
-fun isPermissionGranted(context: Context, permission: String): Boolean {
-    return ContextCompat.checkSelfPermission(
-        context,
-        permission
-    ) == PackageManager.PERMISSION_GRANTED
-}
-
 
 @Composable
 fun CustomOutlinedTextField(
@@ -326,30 +281,6 @@ fun Bitmap.toGrayscale():Bitmap{
     return this
 }
 
-@Composable
-fun getPermissionLauncher(onResult: (Boolean) -> Unit): ManagedActivityResultLauncher<String, Boolean> {
-    return rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = onResult
-    )
-}
-
-@Composable
-fun PermissionDialog(onDismiss: () -> Unit, onContinue: () -> Unit, title: String, text: String) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)) {
-            Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = title, style = MaterialTheme.typography.h6)
-                Text(text = text)
-                CustomButton(text = "Continue") {
-                    onContinue()
-                    onDismiss()
-                }
-            }
-        }
-    }
-}
-
 fun secondsToText(seconds: Int): String {
     if (seconds == 0) {
         return "Time's up!"
@@ -405,3 +336,37 @@ fun AvatarIcon(modifier: Modifier = Modifier, imgModifier: Modifier = Modifier, 
         )
     }
 }
+
+//source: https://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds
+fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
+    val WORLD_DIM = Size(256, 256)
+    val ZOOM_MAX = 21.toDouble()
+
+    fun latRad(lat: Double): Double {
+        val sin = sin(lat * Math.PI / 180)
+        val radX2 = ln((1 + sin) / (1 - sin)) / 2
+        return max(min(radX2, Math.PI), -Math.PI) / 2
+    }
+
+    fun zoom(mapPx: Int, worldPx: Int, fraction: Double): Double {
+        return floor(ln(mapPx / worldPx / fraction) / ln(2.0))
+    }
+
+    val ne = bounds.northeast
+    val sw = bounds.southwest
+
+    val latFraction = (latRad(ne.latitude) - latRad(sw.latitude)) / Math.PI
+
+    val lngDiff = ne.longitude - sw.longitude
+    val lngFraction = if (lngDiff < 0) {
+        (lngDiff + 360) / 360
+    } else {
+        (lngDiff / 360)
+    }
+
+    val latZoom = zoom(mapDim.height, WORLD_DIM.height, latFraction)
+    val lngZoom = zoom(mapDim.width, WORLD_DIM.width, lngFraction)
+
+    return minOf(latZoom, lngZoom, ZOOM_MAX)
+}
+

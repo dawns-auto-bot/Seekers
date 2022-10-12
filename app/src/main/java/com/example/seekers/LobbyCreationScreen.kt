@@ -1,9 +1,5 @@
 package com.example.seekers
 
-import android.Manifest
-import androidx.navigation.NavController
-import com.example.seekers.general.CustomButton
-import com.example.seekers.general.IconButton
 import android.app.Application
 import android.util.Log
 import android.widget.Toast
@@ -25,10 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.seekers.general.PermissionDialog
-import com.example.seekers.general.getPermissionLauncher
-import com.example.seekers.ui.theme.Raisin
+import androidx.navigation.NavController
+import com.example.seekers.general.CustomButton
+import com.example.seekers.general.IconButton
 import com.example.seekers.ui.theme.Emerald
+import com.example.seekers.ui.theme.Raisin
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
@@ -45,7 +42,8 @@ fun LobbyCreationScreen(
     vm: LobbyCreationScreenViewModel = viewModel(),
     navController: NavController,
     nickname: String,
-    avatarId: Int
+    avatarId: Int,
+    permissionVM: PermissionsViewModel
 ) {
     val context = LocalContext.current
     val maxPlayers by vm.maxPlayers.observeAsState()
@@ -55,23 +53,13 @@ fun LobbyCreationScreen(
     val center by vm.center.observeAsState()
     val currentLocation by vm.currentLocation.observeAsState()
     val showMap by vm.showMap.observeAsState(false)
+    val isLocationAllowed by permissionVM.fineLocPerm.observeAsState(false)
 
-    var showPermissionsDialog by remember { mutableStateOf(false) }
-    var dialogShown by remember { mutableStateOf(false) }
-    var isLocationAllowed by remember { mutableStateOf(false) }
     var initialLocationSet by remember { mutableStateOf(false) }
-    var cameraState = rememberCameraPositionState()
-    val locationPermissionLauncher = getPermissionLauncher(
-        onResult = {
-            isLocationAllowed = it
-        }
-    )
+    val cameraState = rememberCameraPositionState()
 
-    LaunchedEffect(dialogShown) {
-        if (dialogShown) {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+    LaunchedEffect(Unit) {
+        permissionVM.checkAllPermissions(context)
     }
 
     LaunchedEffect(isLocationAllowed) {
@@ -116,12 +104,7 @@ fun LobbyCreationScreen(
                     buttonText = "Define Area",
                     buttonColor = Emerald,
                 ) {
-                    if (LocationHelper.checkPermissions(context)) {
-                        isLocationAllowed = true
-                        vm.updateShowMap(true)
-                    } else {
-                        showPermissionsDialog = true
-                    }
+                    vm.updateShowMap(true)
                 }
             }
 
@@ -200,19 +183,6 @@ fun LobbyCreationScreen(
             }
         }
     }
-
-
-    if (showPermissionsDialog) {
-        PermissionDialog(
-            onDismiss = { showPermissionsDialog = false },
-            onContinue = {
-                showPermissionsDialog = false
-                dialogShown = true
-            },
-            title = "Location Permission",
-            text = "Seekers needs your location to enhance your Hide and Seek games!"
-        )
-    }
 }
 
 @Composable
@@ -267,7 +237,8 @@ fun Input(
                     unfocusedBorderColor = Raisin,
                     unfocusedLabelColor = Raisin,
                     trailingIconColor = Raisin
-                )
+                ),
+                singleLine = true
             )
         }
     }
@@ -295,8 +266,8 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
     // Map
     val showMap = MutableLiveData(false)
     val currentLocation = MutableLiveData<LatLng>()
-    val client = LocationServices.getFusedLocationProviderClient(application)
-    val locationCallback = object : LocationCallback() {
+    private val client = LocationServices.getFusedLocationProviderClient(application)
+    private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(p0: LocationResult) {
             p0.lastLocation?.let {
                 currentLocation.postValue(LatLng(it.latitude, it.longitude))

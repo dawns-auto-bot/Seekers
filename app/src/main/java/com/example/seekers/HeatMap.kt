@@ -20,7 +20,6 @@ fun HeatMap(
     radius: Int?,
     properties: MapProperties,
     uiSettings: MapUiSettings,
-    heatPositions: List<LatLng>,
     movingPlayers: List<Player>,
     tileProvider: HeatmapTileProvider?,
     circleCoords: List<LatLng>,

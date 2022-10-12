@@ -158,7 +158,7 @@ class CountdownViewModel : ViewModel() {
                 val start = lobby.startTime.toDate().time / 1000
                 val countdownVal = lobby.countdown
                 val now = Timestamp.now().toDate().time / 1000
-                val remainingCountdown = start + countdownVal - now + 1
+                val remainingCountdown = start + countdownVal - now + 2
                 println("remaining $remainingCountdown")
                 initialValue.postValue(remainingCountdown.toInt())
             }

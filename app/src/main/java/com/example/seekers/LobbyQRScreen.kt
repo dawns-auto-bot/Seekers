@@ -55,6 +55,7 @@ fun LobbyQRScreen(
     navController: NavHostController,
     vm: LobbyCreationScreenViewModel = viewModel(),
     gameId: String,
+    permissionVM: PermissionsViewModel,
 ) {
     val context = LocalContext.current
     val bitmap = generateQRCode(gameId)
@@ -68,6 +69,7 @@ fun LobbyQRScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
+        permissionVM.checkAllPermissions(context)
         scope.launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
             vm.getLobby(gameId)
@@ -176,7 +178,6 @@ fun LobbyQRScreen(
                     }
                 }
             }
-
         }
         if (showQRDialog) {
             QRDialog(
@@ -314,14 +315,12 @@ fun ShowRules(vm: LobbyCreationScreenViewModel) {
 
 @Composable
 fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
-    val context = LocalContext.current
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
     val radius by vm.radius.observeAsState()
     val countdown by vm.countdown.observeAsState()
     val showMap by vm.showMap.observeAsState(false)
     var isLocationAllowed by remember { mutableStateOf(false) }
-    var showPermissionsDialog by remember { mutableStateOf(false) }
     var cameraState = rememberCameraPositionState()
 
     if (!showMap) {
@@ -349,12 +348,7 @@ fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
                 buttonText = "Define Area",
                 buttonColor = if (showMap) Color(0xFF838383) else Color.LightGray,
             ) {
-                if (LocationHelper.checkPermissions(context)) {
-                    isLocationAllowed = true
-                    vm.updateShowMap(true)
-                } else {
-                    showPermissionsDialog = true
-                }
+                vm.updateShowMap(true)
             }
         }
     } else {
@@ -438,12 +432,13 @@ fun QRDialog(
     onDismissRequest: () -> Unit
 ) {
     Dialog(onDismissRequest = { onDismissRequest() }) {
-        Surface(
-            color = Color.White,
+        Card(
+            backgroundColor = Color.White,
+            shape = MaterialTheme.shapes.medium
         ) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(30.dp)
+                modifier = Modifier.padding(10.dp)
             ) {
                 QRCodeComponent(bitmap = bitmap)
             }
@@ -451,17 +446,6 @@ fun QRDialog(
     }
 
 }
-
-@Composable
-fun QRCodeComponent(modifier: Modifier = Modifier, bitmap: Bitmap) {
-
-    Image(
-        bitmap = bitmap.asImageBitmap(),
-        contentDescription = "QR",
-        modifier = modifier.size(250.dp)
-    )
-}
-
 
 @Composable
 fun Participants(
@@ -472,11 +456,13 @@ fun Participants(
     gameId: String
 ) {
     var kickableIndex: Int? by remember { mutableStateOf(null) }
-
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
+        item { 
+            Spacer(modifier = Modifier.height(4.dp))
+        }
         itemsIndexed(players.sortedBy { it.inLobbyStatus }) { index, player ->
             PlayerCard(
                 player = player,

@@ -19,12 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.seekers.general.getActivityRecognitionPermission
 
 @Composable
 fun StepCounter(){
     val context = LocalContext.current
-    getActivityRecognitionPermission(context)
 
     val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     val stepCounterSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)

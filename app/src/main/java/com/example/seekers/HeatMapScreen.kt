@@ -6,7 +6,6 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Build
 import android.os.CountDownTimer
 import android.util.Log
 import android.util.Size
@@ -14,7 +13,6 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,9 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -48,21 +43,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.*
 import com.example.seekers.general.QRCodeComponent
-import com.example.seekers.ui.theme.Powder
-import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.ui.theme.Emerald
-import com.example.seekers.ui.theme.Mango
+import com.example.seekers.ui.theme.Raisin
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.Priority
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
-import com.google.maps.android.compose.*
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.heatmaps.HeatmapTileProvider
-import com.google.maps.android.ktx.utils.withSphericalOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.ZoneId
@@ -70,19 +64,19 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.*
 
 @OptIn(ExperimentalMaterialApi::class)
-@RequiresApi(Build.VERSION_CODES.Q)
 @SuppressLint("MissingPermission")
 @Composable
 fun HeatMapScreen(
     vm: HeatMapViewModel = viewModel(),
     mapControl: Boolean,
     gameId: String,
-    navController: NavHostController
+    navController: NavHostController,
+    permissionVM: PermissionsViewModel
 ) {
     val context = LocalContext.current
     val radius by vm.radius.observeAsState()
-    var locationAllowed by remember { mutableStateOf(false) }
-    var cameraIsAllowed by remember { mutableStateOf(false) }
+    val locationAllowed by permissionVM.fineLocPerm.observeAsState(false)
+    val cameraIsAllowed by permissionVM.cameraPerm.observeAsState(false)
     var initialPosSet by remember { mutableStateOf(false) }
     val lobby by vm.lobby.observeAsState()
     val lobbyStatus by vm.lobbyStatus.observeAsState()
@@ -111,14 +105,6 @@ fun HeatMapScreen(
     var showNews by remember { mutableStateOf(false) }
     var circleCoords by remember { mutableStateOf(listOf<LatLng>()) }
 
-    val locationPermissionLauncher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
-            locationAllowed = allowed
-        }
-    val cameraPermissionLauncher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
-            cameraIsAllowed = allowed
-        }
     val selfieLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) {
             it?.let {
@@ -158,21 +144,15 @@ fun HeatMapScreen(
         )
     }
     LaunchedEffect(Unit) {
+        permissionVM.checkAllPermissions(context)
         launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
             vm.getLobby(gameId)
             vm.getTime(gameId)
             vm.getNews(gameId)
         }
-
 //        vm.addMockPlayers(gameId)
-        if (!locationAllowed) {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        } else {
-            locationAllowed = true
-        }
+
     }
 
     LaunchedEffect(lobbyStatus) {
@@ -340,11 +320,6 @@ fun HeatMapScreen(
                         onClick = {
                             scope.launch { drawerState.close() }
                             if (isSeeker == true) {
-                                if (!cameraIsAllowed) {
-                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                                } else {
-                                    cameraIsAllowed = true
-                                }
                                 if (!showQRScanner) {
                                     showQRScanner = true
                                 }
@@ -443,7 +418,6 @@ fun HeatMapScreen(
                                 radius = radius,
                                 properties = props,
                                 uiSettings = uiSettings,
-                                heatPositions = heatPositions,
                                 movingPlayers = movingPlayers,
                                 eliminatedPlayers = eliminatedPlayers,
                                 tileProvider = tileProvider,
@@ -593,17 +567,6 @@ fun RadarDialog(
 }
 
 @Composable
-fun QRButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Card(shape = CircleShape, elevation = 4.dp, modifier = modifier.clickable { onClick() }) {
-        Icon(
-            imageVector = Icons.Filled.QrCode,
-            contentDescription = "qr",
-            modifier = Modifier.padding(8.dp)
-        )
-    }
-}
-
-@Composable
 fun NewsButton(modifier: Modifier = Modifier, onClick: () -> Unit, hasNew: Boolean) {
     Box {
         Card(shape = CircleShape, elevation = 4.dp, modifier = modifier.clickable { onClick() }) {
@@ -625,7 +588,6 @@ fun NewsButton(modifier: Modifier = Modifier, onClick: () -> Unit, hasNew: Boole
             }
         }
     }
-
 }
 
 @Composable
@@ -729,17 +691,6 @@ fun ShowMyQRDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-fun QRScanButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Card(shape = CircleShape, elevation = 4.dp, modifier = modifier.clickable { onClick() }) {
-        Icon(
-            imageVector = Icons.Filled.QrCodeScanner,
-            contentDescription = "qrScan",
-            modifier = Modifier.padding(8.dp)
-        )
-    }
-}
-
-@Composable
 fun PlayerFoundDialog(playerFound: Player?, onCancel: () -> Unit, onTakePic: () -> Unit) {
     Dialog(onDismissRequest = onCancel) {
         Card(backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)) {
@@ -824,11 +775,12 @@ fun QRScannerDialog(onDismiss: () -> Unit, onScanned: (String) -> Unit) {
 fun GameTimer(vm: HeatMapViewModel) {
     val countdown by vm.countdown.observeAsState()
     countdown?.let {
-        Row(modifier = Modifier.border(BorderStroke(1.dp, Raisin)).padding(2.dp)) {
+        Row(modifier = Modifier
+            .border(BorderStroke(1.dp, Raisin))
+            .padding(2.dp)) {
             Icon(Icons.Default.Alarm, contentDescription = "", tint = Raisin)
             Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
         }
-
     }
 }
 
@@ -876,9 +828,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     val eliminatedPlayers = Transformations.map(playersWithoutSelf) { players ->
         players.filter { it.inGameStatus == InGameStatus.ELIMINATED.ordinal }
     }
-    val statuses = Transformations.map(players) { players ->
-        players.map { it.inGameStatus }
-    }
+
     val countdown = MutableLiveData<Int>()
 
     fun addMockPlayers(gameId: String) {
@@ -1018,10 +968,6 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     fun updateUser(changeMap: Map<String, Any>, uid: String) =
         firestore.updateUser(changeMap = changeMap, userId = uid)
 
-    fun removePlayerFromLobby(gameId: String, playerId: String) {
-        firestore.removePlayer(gameId, playerId)
-    }
-
     fun setPlayerInGameStatus(status: Int, gameId: String, playerId: String) {
         firestore.updatePlayerInGameStatus(
             inGameStatus = status,
@@ -1036,10 +982,6 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
             Pair("timeOfElimination", Timestamp.now())
         )
         firestore.updatePlayer(changeMap, playerId, gameId)
-    }
-
-    fun removePlayer(gameId: String, playerId: String) {
-        firestore.removePlayer(gameId, playerId)
     }
 
     fun sendSelfie(foundPlayerId: String, gameId: String, selfie: Bitmap, nickname: String) {
@@ -1111,38 +1053,5 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
-}
-
-//source: https://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds
-fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
-    val WORLD_DIM = Size(256, 256)
-    val ZOOM_MAX = 21.toDouble()
-
-    fun latRad(lat: Double): Double {
-        val sin = sin(lat * Math.PI / 180)
-        val radX2 = ln((1 + sin) / (1 - sin)) / 2
-        return max(min(radX2, Math.PI), -Math.PI) / 2
-    }
-
-    fun zoom(mapPx: Int, worldPx: Int, fraction: Double): Double {
-        return floor(ln(mapPx / worldPx / fraction) / ln(2.0))
-    }
-
-    val ne = bounds.northeast
-    val sw = bounds.southwest
-
-    val latFraction = (latRad(ne.latitude) - latRad(sw.latitude)) / Math.PI
-
-    val lngDiff = ne.longitude - sw.longitude
-    val lngFraction = if (lngDiff < 0) {
-        (lngDiff + 360) / 360
-    } else {
-        (lngDiff / 360)
-    }
-
-    val latZoom = zoom(mapDim.height, WORLD_DIM.height, latFraction)
-    val lngZoom = zoom(mapDim.width, WORLD_DIM.width, lngFraction)
-
-    return minOf(latZoom, lngZoom, ZOOM_MAX)
 }
 

@@ -2,7 +2,6 @@ package com.example.seekers
 
 import android.content.*
 import android.content.ContentValues.TAG
-import android.os.Build
 
 import android.os.Bundle
 import android.util.Log
@@ -13,7 +12,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.Modifier
 import com.example.seekers.ui.theme.SeekersTheme
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -34,7 +32,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -59,10 +56,8 @@ class MainActivity : ComponentActivity() {
 
     private val REQ_ONE_TAP = 2  // Can be any integer unique to the Activity
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 
         //Google
         oneTapClient = Identity.getSignInClient(this)
@@ -112,12 +107,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
-fun MyAppNavHost() {
+fun MyAppNavHost(permissionVM: PermissionsViewModel = viewModel()) {
 
     val navController = rememberNavController()
     val auth = Firebase.auth
+    val showPermissionDialog by permissionVM.showDialog.observeAsState(false)
 
     NavHost(
         navController = navController,
@@ -135,7 +130,7 @@ fun MyAppNavHost() {
 
         // Create lobby or join game screen
         composable(NavRoutes.StartGame.route) {
-            StartGameScreen(navController)
+            StartGameScreen(navController, permissionVM = permissionVM)
         }
         // Avatar picker screen
         composable(
@@ -163,7 +158,8 @@ fun MyAppNavHost() {
             LobbyCreationScreen(
                 navController = navController,
                 nickname = nickname,
-                avatarId = avatarId
+                avatarId = avatarId,
+                permissionVM = permissionVM
             )
         }
 
@@ -178,6 +174,7 @@ fun MyAppNavHost() {
             LobbyQRScreen(
                 navController = navController,
                 gameId = gameId,
+                permissionVM = permissionVM
             )
         }
         //QR Scanner
@@ -193,7 +190,12 @@ fun MyAppNavHost() {
         ) {
             val nickname = it.arguments!!.getString("nickname")!!
             val avatarId = it.arguments!!.getInt("avatarId")
-            QrScannerScreen(navController, nickname = nickname, avatarId = avatarId)
+            QrScannerScreen(
+                navController,
+                nickname = nickname,
+                avatarId = avatarId,
+                permissionVM = permissionVM
+            )
         }
 
         //Countdown
@@ -215,15 +217,22 @@ fun MyAppNavHost() {
             )
         ) {
             val gameId = it.arguments!!.getString("gameId")!!
-            HeatMapScreen(mapControl = true, navController = navController, gameId = gameId)
+            HeatMapScreen(
+                mapControl = true,
+                navController = navController,
+                gameId = gameId,
+                permissionVM = permissionVM
+            )
         }
+    }
+    if (showPermissionDialog) {
+        PermissionsDialog(onDismiss = { permissionVM.updateShowDialog(false) }, vm = permissionVM)
     }
 }
 
 @Composable
 fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavController) {
     val token = stringResource(R.string.default_web_client_id)
-    val context = LocalContext.current
     val loggedInUser: FirebaseUser? by vm.user.observeAsState(null)
     val gameStatus by vm.gameStatus.observeAsState()
     val gameId by vm.currentGameId.observeAsState()
@@ -343,7 +352,7 @@ class AuthenticationViewModel() : ViewModel() {
             emailValidationError.postValue(false)
     }
 
-    fun validatePassword(password: String) : Boolean {
+    fun validatePassword(password: String): Boolean {
         return if (!isPasswordValid(password)) {
             passwordValidationError.postValue(true)
             false
@@ -373,11 +382,6 @@ class AuthenticationViewModel() : ViewModel() {
                 emailValidationError.value = true
             }
         }
-    }
-
-    fun logOut() {
-        fireBaseAuth.signOut()
-        user.value = null
     }
 
     fun checkUserInUsers(userId: String) {
