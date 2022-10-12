@@ -71,8 +71,8 @@ fun LoginForm(
                 painter = painterResource(R.drawable.seekers_ver2),
                 contentDescription = "seekers",
                 modifier = Modifier
-                    .padding(30.dp)
-                    .size(150.dp)
+
+                    .size(120.dp)
             )
 
         Text(text = "Welcome back!", fontSize = 32.sp, fontWeight = FontWeight.Bold)
@@ -154,11 +154,11 @@ fun LoginForm(
                 }, text = "Login"
             )
         }
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Text(text = "Or", fontSize = 16.sp, color = Color.LightGray)
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         GoogleButton(token = token, context = context, launcher = launcher)
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Row() {
             Text(text = "Don't have an account?", fontSize = 12.sp)
             Text(

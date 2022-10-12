@@ -379,7 +379,42 @@ fun HeatMapScreen(
                                 tileProvider = tileProvider,
                                 circleCoords = circleCoords
                             )
+                            Card(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(12.dp)
+                                    .height(44.dp)
+                                    .fillMaxWidth(),
+                                backgroundColor = Emerald,
+                                border = BorderStroke(1.dp, Raisin),
+                                shape = RoundedCornerShape(5.dp)
+                            ) {
+                                Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Row() {
+                                        Icon(Icons.Default.PermIdentity, contentDescription = "", tint = Raisin)
+                                        Text(text = "3/8", color = Raisin, fontSize = 20.sp)
+                                    }
 
+                                    timer?.let {
+                                        GameTimer(vm = vm)
+                                        LaunchedEffect(Unit) {
+                                            it.start()
+                                        }
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+
+                                        },
+                                        content = {
+                                            Icon(Icons.Default.Notifications, contentDescription = "", tint = Raisin)
+                                        }
+                                    )
+
+                                }
+                            }
+
+                            /*
                             timer?.let {
                                 GameTimer(
                                     modifier = Modifier
@@ -390,53 +425,6 @@ fun HeatMapScreen(
                                 )
                                 LaunchedEffect(Unit) {
                                     it.start()
-                                }
-                            }
-
-                            // BUTTONS IN BOTTOM DRAWER
-                            /* Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .padding(8.dp)
-                            ) {
-                                Button(onClick = {
-                                    vm.updateUser(mapOf(Pair("currentGameId", "")), FirestoreHelper.uid!!)
-                                    vm.stopService(context)
-                                    navController.navigate(NavRoutes.StartGame.route)
-                                }) {
-                                    Text(text = "Leave")
-                                }
-                            } */
-
-                            /* Button(
-                                onClick = {
-                                    showRadar = true
-                                },
-                                modifier = Modifier.align(Alignment.BottomCenter)
-                            ) {
-                                Text(text = "Radar")
-                            } */
-
-                            /* Row(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                QRButton {
-                                    if (!showQR) {
-                                        showQR = true
-                                    }
-                                }
-                                QRScanButton {
-                                    if (!cameraIsAllowed) {
-                                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                                    } else {
-                                        cameraIsAllowed = true
-                                    }
-                                    if (!showQRScanner) {
-                                        showQRScanner = true
-                                    }
                                 }
                             } */
 
@@ -724,19 +712,13 @@ fun QRScannerDialog(onDismiss: () -> Unit, onScanned: (String) -> Unit) {
 }
 
 @Composable
-fun GameTimer(modifier: Modifier = Modifier, vm: HeatMapViewModel) {
+fun GameTimer(vm: HeatMapViewModel) {
     val countdown by vm.countdown.observeAsState()
     countdown?.let {
-        Card(
-            modifier = modifier,
-            backgroundColor = Emerald,
-            shape = RoundedCornerShape(25.dp)
-        ) {
-            Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.Center) {
-                Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
-            }
+        Row(modifier = Modifier.border(BorderStroke(1.dp, Raisin)).padding(2.dp)) {
+            Icon(Icons.Default.Alarm, contentDescription = "", tint = Raisin)
+            Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
         }
-
     }
 }
 

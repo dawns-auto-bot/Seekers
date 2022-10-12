@@ -34,7 +34,7 @@ private val LightColorPalette = lightColors(
 fun SeekersTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val systemUiController = rememberSystemUiController()
     systemUiController.setSystemBarsColor(
-        color = Raisin
+        color = Color(0xFF000000)
     )
 
     val colors = if (darkTheme) {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material.Card
+import androidx.compose.material.Divider
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.LogOutButton
 import com.example.seekers.ui.theme.Powder
+import com.example.seekers.ui.theme.Raisin
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -44,7 +46,6 @@ fun StartGameScreen(navController: NavController) {
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(80.dp))
 
 
                 Card(
@@ -52,7 +53,7 @@ fun StartGameScreen(navController: NavController) {
                         .fillMaxWidth()
                         .height(screenHeight.dp)
                         .padding(horizontal = 15.dp, vertical = 5.dp)
-                        .clickable{ navController.navigate(NavRoutes.AvatarPicker.route + "/true") },
+                        .clickable { navController.navigate(NavRoutes.AvatarPicker.route + "/true") },
                     elevation = 10.dp
                 ) {
                     Box(Modifier.fillMaxSize()) {
@@ -68,7 +69,15 @@ fun StartGameScreen(navController: NavController) {
                                 .align(Alignment.CenterEnd)
                                 .padding(32.dp)
                         ) {
-                            Text(text = "CREATE \n LOBBY", fontSize = 22.sp)
+                            Column {
+                                Text(text = "CREATE\nLOBBY", fontSize = 22.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .width(50.dp)
+                                        .height(1.dp)
+                                        .background(color = Raisin)
+                                )
+                            }
                         }
                     }
 
@@ -84,7 +93,7 @@ fun StartGameScreen(navController: NavController) {
                         .height(screenHeight.dp)
                         .padding(horizontal = 15.dp, vertical = 5.dp)
 
-                        .clickable{ navController.navigate(NavRoutes.AvatarPicker.route + "/false") },
+                        .clickable { navController.navigate(NavRoutes.AvatarPicker.route + "/false") },
                     elevation = 10.dp
                 ) {
                     Box(Modifier.fillMaxSize()) {
@@ -100,7 +109,15 @@ fun StartGameScreen(navController: NavController) {
                                 .align(Alignment.CenterStart)
                                 .padding(32.dp)
                         ) {
-                            Text(text = "JOIN \n LOBBY", fontSize = 22.sp)
+                            Column {
+                                Text(text = "JOIN\nLOBBY", fontSize = 22.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .width(50.dp)
+                                        .height(1.dp)
+                                        .background(color = Raisin)
+                                )
+                            }
                         }
                     }
 
