@@ -178,6 +178,10 @@ fun HeatMapScreen(
     LaunchedEffect(lobbyStatus) {
         lobbyStatus?.let {
             when (it) {
+                LobbyStatus.ACTIVE.value ->{
+
+                }
+
                 LobbyStatus.FINISHED.value -> {
                     Toast.makeText(context, "The game has ended", Toast.LENGTH_LONG).show()
                     /*
