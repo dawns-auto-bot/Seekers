@@ -62,22 +62,20 @@ fun LoginForm(
     val width = LocalConfiguration.current.screenWidthDp * 0.8
 
     Column(
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.SpaceEvenly,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .padding(30.dp),
+            .padding(30.dp).fillMaxHeight(),
     ) {
         Image(
                 painter = painterResource(R.drawable.seekers_ver2),
                 contentDescription = "seekers",
-                modifier = Modifier
-
-                    .size(120.dp)
+                modifier = Modifier.size(120.dp)
             )
 
         Text(text = "Welcome back!", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-        Text(text = "Sign in to continue", fontSize = 16.sp, color = Color.LightGray)
-        Spacer(modifier = Modifier.height(40.dp))
+        Text(text = "Sign in to continue", fontSize = 16.sp, color = Raisin)
+        // Spacer(modifier = Modifier.height(40.dp))
         if(invalidCredentials) {
             Text(text = "Invalid email or password", color = Color.Red)
         }
@@ -90,7 +88,7 @@ fun LoginForm(
             keyboardType = KeyboardType.Email,
             modifier = Modifier.width(width.dp)
         )
-        Spacer(modifier = Modifier.height(10.dp))
+        // Spacer(modifier = Modifier.height(10.dp))
         CustomOutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -113,7 +111,7 @@ fun LoginForm(
             passwordVisible = passwordVisible,
             modifier = Modifier.width(width.dp)
         )
-        Spacer(modifier = Modifier.height(20.dp))
+        // Spacer(modifier = Modifier.height(20.dp))
         Row(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
@@ -154,13 +152,13 @@ fun LoginForm(
                 }, text = "Login"
             )
         }
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(text = "Or", fontSize = 16.sp, color = Color.LightGray)
-        Spacer(modifier = Modifier.height(20.dp))
+        // Spacer(modifier = Modifier.height(20.dp))
+        Text(text = "Or", fontSize = 16.sp, color = Raisin)
+        // Spacer(modifier = Modifier.height(20.dp))
         GoogleButton(token = token, context = context, launcher = launcher)
-        Spacer(modifier = Modifier.height(20.dp))
+        // Spacer(modifier = Modifier.height(20.dp))
         Row() {
-            Text(text = "Don't have an account?", fontSize = 12.sp)
+            Text(text = "Don't have an account?", fontSize = 12.sp, color = Raisin)
             Text(
                 text = " Create one now",
                 fontSize = 12.sp,

@@ -300,7 +300,7 @@ fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavCont
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+
         modifier = Modifier.fillMaxHeight()
     ) {
 
