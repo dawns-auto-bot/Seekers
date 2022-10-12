@@ -192,11 +192,6 @@ fun CreateUserForm(
                     if (password.text != "" && email.text != "" && passwordError != false) {
                         val validated = model.validatePassword(password.text)
                         if (validated) {
-                            Toast.makeText(
-                                context,
-                                "Validation succeeded",
-                                Toast.LENGTH_LONG
-                            ).show()
                             auth.createUserWithEmailAndPassword(
                                 email.text,
                                 password.text

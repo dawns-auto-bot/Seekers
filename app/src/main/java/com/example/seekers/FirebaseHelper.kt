@@ -86,7 +86,7 @@ object FirebaseHelper {
         return usersRef
     }
 
-    fun addUser(map: HashMap<String, String>, uid: String) {
+    fun addUser(map: Map<String, Any>, uid: String) {
         usersRef.document(uid)
             .set(map)
             .addOnSuccessListener {

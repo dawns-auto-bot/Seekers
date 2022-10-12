@@ -265,7 +265,7 @@ fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavCont
                     Pair("currentGameId", ""),
                     Pair("email", loggedInUser!!.email!!)
                 )
-                vm.updateUserDoc(loggedInUser!!.uid, changeMap)
+                vm.addUserDoc(loggedInUser!!.uid, changeMap)
                 navController.navigate(NavRoutes.StartGame.route)
             }
         }
@@ -355,6 +355,10 @@ class AuthenticationViewModel() : ViewModel() {
 
     fun updateUserDoc(userId: String, changeMap: Map<String, Any>) =
         firestore.updateUser(userId, changeMap)
+
+    fun addUserDoc(userId: String, changeMap: Map<String, Any>) {
+        firestore.addUser(changeMap, userId)
+    }
 
     fun setUser(firebaseUser: FirebaseUser?) {
         user.value = firebaseUser
