@@ -49,6 +49,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.*
@@ -1111,12 +1112,13 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
-    var steps = MutableLiveData(0)
-    var distance = MutableLiveData(0.0F)
-    var running  = MutableLiveData(false)
-    val stepLength = 0.78F
-
-    var initialSteps = MutableLiveData(-2)
+    //Variables and functions for the step counter
+    private var steps = 0
+    private var distance = 0.0F
+    private var running  = false
+    private val stepLength = 0.78F
+    //private val context = application
+    private var initialSteps = -1
     private val sensorManager: SensorManager = application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     val stepCounterSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
     private val sharedPreference: SharedPreferences =  application.getSharedPreferences("statistics",Context.MODE_PRIVATE)
@@ -1126,51 +1128,49 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     private val sensorEventListener = object: SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
             if(event.sensor == stepCounterSensor){
-                if(running.value == true){
-                    event.values.firstOrNull()?.toInt().let { newSteps ->
-                        if (initialSteps.value == -2) {
-                            initialSteps.value = newSteps!!
+                if(running == true){
+                    event.values.firstOrNull()?.toInt()?.let { newSteps ->
+                        if (initialSteps == -1) {
+                            initialSteps = newSteps
                         }
-                        val currentSteps = newSteps?.minus(initialSteps.value!!)
-                        if (currentSteps != null) {
-                            steps.value = currentSteps
-                            Log.d("steps", steps.value.toString())
-                        }
+                        val currentSteps = newSteps.minus(initialSteps)
+                        steps = currentSteps
+                        Log.d("steps", steps.toString())
                     }
                 }
             }
         }
-
-
         override fun onAccuracyChanged(sensor: Sensor?, p1: Int) {
-            Log.d("something", "something")
+            Log.d(sensor.toString(), p1.toString())
         }
     }
 
     fun startStepCounter(){
-        running.value=true
+        running=true
         sensorManager.registerListener(
             sensorEventListener,
             stepCounterSensor,
             SensorManager.SENSOR_DELAY_NORMAL
         )
-        //Toast.makeText(context, "Start", Toast.LENGTH_SHORT).show()
     }
 
     fun stopStepCounter(){
-        running.value=false
+        running=false
         sensorManager.unregisterListener(sensorEventListener)
-        steps.value?.let { sharedPreferenceEditor.putInt("step count", it) }
+        sharedPreferenceEditor.putInt("step count", steps)
         sharedPreferenceEditor.commit()
+
+        countDistance()
         val value = sharedPreference.getInt("step count", 0)
         Log.d("steps from shared preferences", value.toString())
 
-        //Toast.makeText(context, "Stop", Toast.LENGTH_SHORT).show()
-        initialSteps.value = -2
+        //Toast.makeText(context, value.toString(), Toast.LENGTH_LONG).show()
+        initialSteps = -1
     }
-    fun countDistance(){
-        val length = stepLength.times(steps.value!!.toFloat())
-        distance.value=length
+    private fun countDistance(){
+        distance = stepLength.times(steps.toFloat())
+        sharedPreferenceEditor.putFloat("distance moved", distance)
+        sharedPreferenceEditor.commit()
     }
 
 }
