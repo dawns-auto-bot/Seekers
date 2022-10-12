@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.seekers.general.getCornerCoords
 import com.example.seekers.general.toGrayscale
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
@@ -21,7 +22,7 @@ fun HeatMap(
     uiSettings: MapUiSettings,
     heatPositions: List<LatLng>,
     movingPlayers: List<Player>,
-    tileProvider: HeatmapTileProvider,
+    tileProvider: HeatmapTileProvider?,
     circleCoords: List<LatLng>,
     eliminatedPlayers: List<Player>
 ) {
@@ -31,12 +32,13 @@ fun HeatMap(
         properties = properties,
         uiSettings = uiSettings,
     ) {
-        if (heatPositions.isNotEmpty()) {
+        tileProvider?.let {
             TileOverlay(
-                tileProvider = tileProvider,
+                tileProvider = it,
                 transparency = 0.3f
             )
         }
+
         movingPlayers.forEach {
             val res = avatarList[it.avatarId]
             val bitmap = BitmapFactory.decodeResource(context.resources, res)

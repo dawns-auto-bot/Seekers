@@ -7,13 +7,16 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.location.Location
+import android.os.CountDownTimer
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.example.seekers.general.secondsToText
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
@@ -21,22 +24,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class LocationService : Service() {
+class ForegroundService : Service() {
     companion object {
         const val TAG = "LOCATION_SERVICE"
         const val SEEKER_NOTIFICATION = "SEEKER_NOTIFICATION"
         const val BOUNDS_NOTIFICATION = "BOUNDS_NOTIFICATION"
         const val FOUND_NOTIFICATION = "FOUND_NOTIFICATION"
-        var seekerNearbySent = false
-        var outOfBoundsSent = false
+        const val MAIN_NOTIFICATION_ID = 1
+        const val SEEKER_NOTIFICATION_ID = 2
+        const val BOUNDS_NOTIFICATION_ID = 3
+        const val FOUND_NOTIFICATION_ID = 4
+
         fun start(context: Context, gameId: String, isSeeker: Boolean) {
-            val startIntent = Intent(context, LocationService::class.java)
+            val startIntent = Intent(context, ForegroundService::class.java)
             startIntent.putExtra("gameId", gameId)
             startIntent.putExtra("isSeeker", isSeeker)
             ContextCompat.startForegroundService(context, startIntent)
         }
         fun stop(context: Context) {
-            val stopIntent = Intent(context, LocationService::class.java)
+            val stopIntent = Intent(context, ForegroundService::class.java)
             context.stopService(stopIntent)
         }
     }
@@ -47,6 +53,10 @@ class LocationService : Service() {
     var isTracking = false
     val scope = CoroutineScope(Dispatchers.IO)
     var newsCount = 0
+    var seekerNearbySent = false
+    var outOfBoundsSent = false
+    var timer: CountDownTimer? = null
+    var currentGameId: String? = null
 
     override fun onBind(p0: Intent?): IBinder? {
         return null
@@ -241,7 +251,7 @@ class LocationService : Service() {
             autoCancel = true
         )
         with(NotificationManagerCompat.from(applicationContext)) {
-            notify(3, notification)
+            notify(SEEKER_NOTIFICATION_ID, notification)
         }
     }
 
@@ -257,7 +267,7 @@ class LocationService : Service() {
             autoCancel = true
         )
         with(NotificationManagerCompat.from(applicationContext)) {
-            notify(4, notification)
+            notify(BOUNDS_NOTIFICATION_ID, notification)
         }
     }
 
@@ -273,7 +283,7 @@ class LocationService : Service() {
             autoCancel = true
         )
         with(NotificationManagerCompat.from(applicationContext)) {
-            notify(5, notification)
+            notify(FOUND_NOTIFICATION_ID, notification)
         }
     }
 
@@ -298,6 +308,7 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand: service started")
         val gameId = intent?.getStringExtra("gameId")!!
+        currentGameId = gameId
         val isSeeker = intent.getBooleanExtra("isSeeker", false)
         scope.launch {
             listenForNews(gameId)
@@ -314,15 +325,80 @@ class LocationService : Service() {
             importanceLevel = NotificationManager.IMPORTANCE_HIGH
         )
         Notifications.createNotificationChannel(context = applicationContext)
-        val notification = Notifications.createNotification(
+        val notification = buildMainNotification(null)
+        startForeground(MAIN_NOTIFICATION_ID, notification)
+        startTracking(gameId, isSeeker)
+        getTime(gameId)
+        return START_NOT_STICKY
+    }
+
+    private fun buildMainNotification(timeLeft: Int?): Notification {
+        val timeText = timeLeft?.let { secondsToText(it) } ?: "Initializing the timer"
+        return Notifications.createNotification(
             context = applicationContext,
             title = "Seekers - Game in progress",
-            content = "Seekers is sending your location to the game",
+            content = timeText,
             pendingIntent = getPendingIntent()
         )
-        startForeground(1, notification)
-        startTracking(gameId, isSeeker)
-        return START_NOT_STICKY
+    }
+
+    private fun getTime(gameId: String) {
+        val now = Timestamp.now().toDate().time.div(1000)
+        firestore.getLobby(gameId = gameId).get()
+            .addOnSuccessListener {
+                val lobby = it.toObject(Lobby::class.java)
+                lobby?.let {
+                    val startTime = lobby.startTime.toDate().time / 1000
+                    val countdown = lobby.countdown
+                    val timeLimit = lobby.timeLimit * 60
+                    val gameEndTime = (startTime + countdown + timeLimit)
+                    val timeLeft = (gameEndTime.minus(now).toInt() + 1)
+                    startTimer(timeLeft)
+                }
+            }
+    }
+
+    private fun startTimer(timeLeft: Int) {
+        timer = object: CountDownTimer(timeLeft * 1000L, 1000) {
+            override fun onTick(p0: Long) {
+                if (p0 == 0L) {
+                    return
+                }
+                updateMainNotification(p0.div(1000).toInt())
+            }
+            override fun onFinish() {
+                endGame()
+            }
+        }
+        timer?.start()
+    }
+
+    private fun stopTimer() {
+        timer?.cancel()
+    }
+
+    fun updateMainNotification(timeLeft: Int) {
+        with(NotificationManagerCompat.from(applicationContext)) {
+            notify(MAIN_NOTIFICATION_ID, buildMainNotification(timeLeft))
+        }
+    }
+
+    fun endGame() {
+        currentGameId?.let { id ->
+        firestore.getPlayers(gameId = id).get()
+            .addOnSuccessListener { data ->
+                val players = data.toObjects(Player::class.java)
+                val creator = players.find { it.inLobbyStatus == InLobbyStatus.CREATOR.value }
+                if (firestore.uid == creator?.playerId) {
+                    val changeMap = mapOf(Pair("status", LobbyStatus.FINISHED.value))
+                    firestore.updateLobby(changeMap, gameId = id)
+                }
+                scope.launch {
+                    delay(2000)
+                    stop(applicationContext)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -330,6 +406,7 @@ class LocationService : Service() {
         if (isTracking) {
             callback?.let {
                 stopTracking(it)
+                stopTimer()
             }
         }
     }

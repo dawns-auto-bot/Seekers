@@ -11,8 +11,12 @@ import android.widget.FrameLayout
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,9 +41,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.budiyev.android.codescanner.*
+import com.example.seekers.ui.theme.avatarBackground
 import com.example.seekers.ui.theme.emailAvailable
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.maps.android.ktx.utils.withSphericalOffset
 import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
+import kotlin.math.PI
+import kotlin.math.cos
 
 fun generateQRCode(data: String): Bitmap {
     val fileOut = ByteArrayOutputStream()
@@ -72,14 +82,19 @@ fun getActivityRecognitionPermission(context: Context) {
             Manifest.permission.ACTIVITY_RECOGNITION
         ) == PackageManager.PERMISSION_DENIED
     ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ActivityCompat.requestPermissions(
-                context as Activity,
-                arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION),
-                1
-            )
-        }
+        ActivityCompat.requestPermissions(
+            context as Activity,
+            arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+            1
+        )
     }
+}
+
+fun isPermissionGranted(context: Context, permission: String): Boolean {
+    return ContextCompat.checkSelfPermission(
+        context,
+        permission
+    ) == PackageManager.PERMISSION_GRANTED
 }
 
 
@@ -315,5 +330,61 @@ fun PermissionDialog(onDismiss: () -> Unit, onContinue: () -> Unit, title: Strin
                 }
             }
         }
+    }
+}
+
+fun secondsToText(seconds: Int): String {
+    if (seconds == 0) {
+        return "Time's up!"
+    }
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds - hours * 3600 - minutes * 60
+
+    if (seconds < 3600) {
+        return "${minutes.toTimeString()}:${secs.toTimeString()}"
+    }
+
+    return "${hours.toTimeString()}:${minutes.toTimeString()}:${secs.toTimeString()}"
+}
+
+fun Int.toTimeString() = if (this < 10) "0$this" else this.toString()
+
+fun getBounds(center: LatLng, radius: Int): LatLngBounds {
+    val multiplier = cos(PI / 4)
+    val sw = center.withSphericalOffset(radius.div(multiplier), 225.0)
+    val ne = center.withSphericalOffset(radius.div(multiplier), 45.0)
+    return LatLngBounds(sw, ne)
+}
+
+fun getCornerCoords(center: LatLng, radius: Int): List<LatLng> {
+    val ne = center.withSphericalOffset(radius * 10.0, 45.0)
+    val se = center.withSphericalOffset(radius * 10.0, 135.0)
+    val sw = center.withSphericalOffset(radius * 10.0, 225.0)
+    val nw = center.withSphericalOffset(radius * 10.0, 315.0)
+    return listOf(ne, se, sw, nw)
+}
+
+fun getCircleCoords(center: LatLng, radius: Int): List<LatLng> {
+    val list = mutableListOf<LatLng>()
+    (0..360).forEach {
+        list.add(center.withSphericalOffset(radius.toDouble() + 1.0, it.toDouble()))
+    }
+    return list
+}
+
+@Composable
+fun AvatarIcon(modifier: Modifier = Modifier, imgModifier: Modifier = Modifier, resourceId: Int) {
+    Card(
+        shape = CircleShape,
+        border = BorderStroke(2.dp, Color.Black),
+        backgroundColor = avatarBackground,
+        modifier = modifier
+    ) {
+        Image(
+            painter = painterResource(id = resourceId),
+            contentDescription = "avatar",
+            modifier = imgModifier
+        )
     }
 }

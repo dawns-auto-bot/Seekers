@@ -6,7 +6,6 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.os.Build
 import android.os.CountDownTimer
 import android.util.Log
@@ -32,7 +31,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
@@ -46,7 +44,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import coil.compose.AsyncImage
 import com.example.seekers.general.*
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.*
@@ -57,7 +54,6 @@ import com.google.maps.android.heatmaps.HeatmapTileProvider
 import com.google.maps.android.ktx.utils.withSphericalOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.*
@@ -77,6 +73,7 @@ fun HeatMapScreen(
     var cameraIsAllowed by remember { mutableStateOf(false) }
     var initialPosSet by remember { mutableStateOf(false) }
     val lobby by vm.lobby.observeAsState()
+    val lobbyStatus by vm.lobbyStatus.observeAsState()
     var timer: CountDownTimer? by remember { mutableStateOf(null) }
     val timeRemaining by vm.timeRemaining.observeAsState()
     val center by vm.center.observeAsState()
@@ -94,6 +91,7 @@ fun HeatMapScreen(
     var showQR by remember { mutableStateOf(false) }
     var showQRScanner by remember { mutableStateOf(false) }
     var showPlayerFound by remember { mutableStateOf(false) }
+    var showPlayerList by remember { mutableStateOf(false) }
     var playerFound: Player? by remember { mutableStateOf(null) }
     var selfie: Bitmap? by remember { mutableStateOf(null) }
     var showSendSelfie by remember { mutableStateOf(false) }
@@ -116,13 +114,15 @@ fun HeatMapScreen(
             }
         }
 
-
     val tileProvider by remember {
         derivedStateOf {
-            val provider = HeatmapTileProvider.Builder()
-                .data(heatPositions)
-                .build()
-            provider.setRadius(200)
+            var provider: HeatmapTileProvider? = null
+            if (heatPositions.isNotEmpty()) {
+                provider = HeatmapTileProvider.Builder()
+                    .data(heatPositions)
+                    .build()
+                provider.setRadius(200)
+            }
             provider
         }
     }
@@ -139,7 +139,7 @@ fun HeatMapScreen(
                 scrollGesturesEnabled = mapControl,
                 scrollGesturesEnabledDuringRotateOrZoom = mapControl,
                 tiltGesturesEnabled = mapControl,
-                zoomControlsEnabled = mapControl,
+                zoomControlsEnabled = false,
                 zoomGesturesEnabled = mapControl
             )
         )
@@ -160,6 +160,22 @@ fun HeatMapScreen(
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         } else {
             locationAllowed = true
+        }
+    }
+
+    LaunchedEffect(lobbyStatus) {
+        lobbyStatus?.let {
+            when (it) {
+                LobbyStatus.FINISHED.value -> {
+                    Toast.makeText(context, "The game has ended", Toast.LENGTH_LONG).show()
+                    /*
+                    * Steps
+                    * Time survived
+                    * Time as seeker
+                    * Number of players found by me
+                    * */
+                }
+            }
         }
     }
 
@@ -189,12 +205,6 @@ fun HeatMapScreen(
         }
     }
 
-//    LaunchedEffect(locationAllowed) {
-//        if (locationAllowed) {
-//            vm.startLocationUpdatesForPlayer(FirestoreHelper.uid!!, gameId)
-//        }
-//    }
-
     LaunchedEffect(timeRemaining) {
         timeRemaining?.let {
             vm.updateCountdown(it)
@@ -207,18 +217,16 @@ fun HeatMapScreen(
                     vm.updateCountdown(p0.div(1000).toInt())
                 }
 
-                override fun onFinish() {
-                    Toast.makeText(context, "The game is over", Toast.LENGTH_SHORT).show()
-                }
+                override fun onFinish() {}
             }
         }
     }
 
-    LaunchedEffect(eliminatedPlayers) {
-        eliminatedPlayers.find { it.playerId == FirebaseHelper.uid!! }?.let {
-            vm.stopService(context)
-        }
-    }
+//    LaunchedEffect(eliminatedPlayers) {
+//        eliminatedPlayers.find { it.playerId == FirebaseHelper.uid!! }?.let {
+//            vm.stopService(context)
+//        }
+//    }
 
     if (!initialPosSet) {
         val density = LocalDensity.current
@@ -312,7 +320,7 @@ fun HeatMapScreen(
                     onClick = {
                         showRadar = true
                     },
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    modifier = Modifier.align(Alignment.BottomEnd)
                 ) {
                     Text(text = "Radar")
                 }
@@ -342,6 +350,12 @@ fun HeatMapScreen(
                         showNews = true
                         vm.hasNewNews.value = false
                     }, hasNew = hasNewNews)
+
+                    PlayerListButton {
+                        if (!showPlayerList) {
+                            showPlayerList = true
+                        }
+                    }
                 }
 
                 if (showRadar) {
@@ -405,6 +419,10 @@ fun HeatMapScreen(
                     NewsDialog(newsList = news!!, gameId = gameId) {
                         showNews = false
                     }
+                }
+
+                if (showPlayerList && players != null) {
+                    PlayerListDialog(onDismiss = { showPlayerList = false }, players = players!!)
                 }
             } else {
                 Text(text = "Location permission needed")
@@ -675,46 +693,6 @@ fun GameTimer(modifier: Modifier = Modifier, vm: HeatMapViewModel) {
     }
 }
 
-fun getBounds(center: LatLng, radius: Int): LatLngBounds {
-    val multiplier = cos(PI / 4)
-    val sw = center.withSphericalOffset(radius.div(multiplier), 225.0)
-    val ne = center.withSphericalOffset(radius.div(multiplier), 45.0)
-    return LatLngBounds(sw, ne)
-}
-
-fun getCornerCoords(center: LatLng, radius: Int): List<LatLng> {
-    val ne = center.withSphericalOffset(radius * 10.0, 45.0)
-    val se = center.withSphericalOffset(radius * 10.0, 135.0)
-    val sw = center.withSphericalOffset(radius * 10.0, 225.0)
-    val nw = center.withSphericalOffset(radius * 10.0, 315.0)
-    return listOf(ne, se, sw, nw)
-}
-
-fun getCircleCoords(center: LatLng, radius: Int): List<LatLng> {
-    val list = mutableListOf<LatLng>()
-    (0..360).forEach {
-        list.add(center.withSphericalOffset(radius.toDouble() + 1.0, it.toDouble()))
-    }
-    return list
-}
-
-fun secondsToText(seconds: Int): String {
-    if (seconds == 0) {
-        return "Times up!"
-    }
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    val secs = seconds - hours * 3600 - minutes * 60
-
-    if (seconds < 3600) {
-        return "${minutes.toTimeString()}:${secs.toTimeString()}"
-    }
-
-    return "${hours.toTimeString()}:${minutes.toTimeString()}:${secs.toTimeString()}"
-}
-
-fun Int.toTimeString() = if (this < 10) "0$this" else this.toString()
-
 class HeatMapViewModel(application: Application) : AndroidViewModel(application) {
     val TAG = "heatMapVM"
 
@@ -928,7 +906,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     fun getNews(gameId: String) {
         firestore.getNews(gameId).addSnapshotListener { data, e ->
             data ?: kotlin.run {
-                Log.e(LocationService.TAG, "listenForNews: ", e)
+                Log.e(ForegroundService.TAG, "listenForNews: ", e)
                 return@addSnapshotListener
             }
             val newsList = data.toObjects(News::class.java)
@@ -970,7 +948,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 //    }
 
     fun startService(context: Context, gameId: String, isSeeker: Boolean) {
-        LocationService.start(
+        ForegroundService.start(
             context = context,
             gameId = gameId,
             isSeeker = isSeeker
@@ -978,7 +956,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun stopService(context: Context) {
-        LocationService.stop(
+        ForegroundService.stop(
             context = context,
         )
     }

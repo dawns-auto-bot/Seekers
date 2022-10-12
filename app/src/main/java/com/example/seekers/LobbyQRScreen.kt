@@ -40,6 +40,7 @@ import com.example.seekers.general.generateQRCode
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -80,7 +81,10 @@ fun LobbyQRScreen(
                     navController.navigate(NavRoutes.StartGame.route)
                 }
                 LobbyStatus.COUNTDOWN.value -> {
-                    navController.navigate(NavRoutes.Countdown.route + "/$gameId")
+                    scope.launch {
+                        delay(1000)
+                        navController.navigate(NavRoutes.Countdown.route + "/$gameId")
+                    }
                 }
                 LobbyStatus.ACTIVE.value -> {
                     navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
@@ -372,9 +376,7 @@ fun QRDialog(
             ) {
                 QRCodeComponent(bitmap = bitmap)
             }
-
         }
-
     }
 
 }
