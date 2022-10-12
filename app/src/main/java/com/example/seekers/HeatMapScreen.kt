@@ -393,9 +393,7 @@ fun HeatMapScreen(
                         })
                     IconButton(
                         onClick = {
-                            vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
-                            vm.stopService(context)
-                            navController.navigate(NavRoutes.StartGame.route)
+                            showLeaveGameDialog = true
                         },
                         content = {
                             Column(

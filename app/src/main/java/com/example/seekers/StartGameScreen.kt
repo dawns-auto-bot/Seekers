@@ -2,10 +2,10 @@ package com.example.seekers
 
 import android.Manifest
 import android.content.Context
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,31 +17,18 @@ import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.foundation.shape.CutCornerShape
-import androidx.compose.foundation.shape.GenericShape
-import androidx.compose.material.Card
-import androidx.compose.material.Divider
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -51,13 +38,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.LogOutButton
-import com.example.seekers.ui.theme.Powder
-import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.general.getPermissionLauncher
 import com.example.seekers.general.isPermissionGranted
+import com.example.seekers.ui.theme.Powder
+import com.example.seekers.ui.theme.Raisin
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
+@RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = viewModel()) {
     val context = LocalContext.current
@@ -151,28 +139,15 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
                             }
                         }
                     }
-
-                    /*
-                    CustomButton(text = "Join lobby") {
-                        navController.navigate(NavRoutes.AvatarPicker.route + "/false")
-                    } */
                 }
-
             }
-            Text(
-                text = "${FirebaseHelper.uid}", modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(32.dp)
-            )
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(32.dp)
             ) {
                 LogOutButton(text = "Log out") {
-                    Firebase.auth.signOut()
-                    println("logged user: ${Firebase.auth.currentUser}")
-                    navController.navigate(NavRoutes.MainScreen.route)
+                    showLogOutDialog = true
                 }
             }
         }

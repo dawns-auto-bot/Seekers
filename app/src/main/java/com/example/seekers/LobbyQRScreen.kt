@@ -38,6 +38,7 @@ import com.example.seekers.general.CustomButton
 import com.example.seekers.general.IconButton
 import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.generateQRCode
+import com.example.seekers.ui.theme.Emerald
 import com.example.seekers.ui.theme.SizzlingRed
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
@@ -347,7 +348,7 @@ fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
             IconButton(
                 resourceId = R.drawable.map,
                 buttonText = "Define Area",
-                buttonColor = if (showMap) Color(0xFF838383) else Color.LightGray,
+                buttonColor = Emerald,
             ) {
                 if (LocationHelper.checkPermissions(context)) {
                     isLocationAllowed = true

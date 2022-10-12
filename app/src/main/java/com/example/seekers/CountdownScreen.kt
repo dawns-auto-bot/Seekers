@@ -1,7 +1,11 @@
 package com.example.seekers
 
+import android.content.Context
 import android.media.MediaPlayer
 import android.os.CountDownTimer
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.CircularProgressIndicator
@@ -13,9 +17,11 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.MutableLiveData
@@ -33,17 +39,19 @@ fun CountdownScreen(
     vm: CountdownViewModel = viewModel(),
 ) {
     val initialValue by vm.initialValue.observeAsState()
+    val isCreator by vm.isCreator.observeAsState()
     val countdown by vm.countdown.observeAsState()
     var timesUp by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var countdownTimer: CountDownTimer? by remember { mutableStateOf(null) }
-    val mediaPlayerHidingPhaseMusic: MediaPlayer = MediaPlayer.create(context, R.raw.countdown_music)
-    val mediaPlayerCountdown : MediaPlayer = MediaPlayer.create(context, R.raw.counting_down)
+    val mediaPlayerCountdown: MediaPlayer = MediaPlayer.create(context, R.raw.counting_down)
+    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
 
     LaunchedEffect(Unit) {
         vm.getInitialValue(gameId)
-        mediaPlayerHidingPhaseMusic.start()
+        vm.getPlayer(gameId, FirebaseHelper.uid!!)
     }
 
     LaunchedEffect(initialValue) {
@@ -55,13 +63,19 @@ fun CountdownScreen(
                         vm.updateCountdown(0)
                         return
                     }
-                    vm.updateCountdown((p0 / 1000).toInt())
-                    if((p0 / 1000).toInt() == 10) {
-                    scope.launch {
+                    if (isCreator == true) {
+                        if ((p0 / 1000).toInt() == 10) {
                             mediaPlayerCountdown.start()
                         }
+                    } else {
+                        if ((p0 / 1000).toInt() in 1..5) {
+                            vibrator.vibrate(VibrationEffect.createOneShot(100, 255))
+                        }
+                        if ((p0 / 1000).toInt() == 0) {
+                            vibrator.vibrate(VibrationEffect.createOneShot(500, 255))
+                        }
                     }
-
+                    vm.updateCountdown((p0 / 1000).toInt())
                 }
 
                 override fun onFinish() {
@@ -72,8 +86,8 @@ fun CountdownScreen(
                             mapOf(Pair("status", LobbyStatus.ACTIVE.value)),
                             gameId
                         )
-                        mediaPlayerHidingPhaseMusic.stop()
                         mediaPlayerCountdown.stop()
+                        mediaPlayerCountdown.release()
                         navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
                     }
                 }
@@ -142,6 +156,20 @@ class CountdownViewModel : ViewModel() {
     val firestore = FirebaseHelper
     val initialValue = MutableLiveData<Int>()
     val countdown = MutableLiveData<Int>()
+    val isCreator = MutableLiveData<Boolean>()
+
+    fun getPlayer(gameId: String, playerId: String) {
+        firestore.getPlayer(gameId, playerId).get()
+            .addOnSuccessListener { data ->
+                val player = data.toObject(Player::class.java)
+                player?.let {
+                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.value)
+                }
+            }
+            .addOnFailureListener {
+                Log.e("getPlayerCountdown", "getPlayer: ", it)
+            }
+    }
 
     fun updateCountdown(seconds: Int) {
         countdown.value = seconds
@@ -164,11 +192,3 @@ class CountdownViewModel : ViewModel() {
             }
     }
 }
-
-//@Preview
-//@Composable
-//fun CountdownPrev() {
-//    SeekersTheme() {
-//        CountdownScreen(seconds = 10, navController = rememberNavController())
-//    }
-//}

@@ -103,10 +103,6 @@ object FirebaseHelper {
             }
     }
 
-    fun getPlayerStatus(gameId: String, playerId: String): DocumentReference {
-        return lobbiesRef.document(gameId).collection("players").document(playerId)
-    }
-
     fun updatePlayer(changeMap: Map<String, Any>, playerId: String, gameId: String) {
         val playerRef = lobbiesRef.document(gameId).collection("players").document(playerId)
         playerRef.update(changeMap)

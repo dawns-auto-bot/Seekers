@@ -31,7 +31,6 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.seekers.general.CustomButton
 import com.example.seekers.ui.theme.avatarBackground
-import com.google.firebase.firestore.GeoPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -188,9 +187,10 @@ class RadarViewModel() : ViewModel() {
     val scanningStatus: LiveData<Int> = _scanningStatus
     val players = MutableLiveData(listOf<Pair<Player, Float>>())
 
-    fun filterPlayersList(list: List<Player>) {
+    fun filterPlayersList(list: List<Player>, initialSeeker: Player) {
         viewModelScope.launch(Dispatchers.Default) {
-            val seekersGeoPoint = GeoPoint(60.22382613352466, 24.758245842202495)
+            val seekersGeoPoint = initialSeeker.location
+            Log.d("initialSeeker", seekersGeoPoint.toString())
             val seekerConvertedToLocation = Location(LocationManager.GPS_PROVIDER)
             seekerConvertedToLocation.latitude = seekersGeoPoint.latitude
             seekerConvertedToLocation.longitude = seekersGeoPoint.longitude
@@ -233,7 +233,10 @@ class RadarViewModel() : ViewModel() {
         firestore.getPlayers(gameId)
             .get().addOnSuccessListener { list ->
                 val playerList = list.toObjects(Player::class.java)
-                filterPlayersList(playerList)
+                val seekerScanning = playerList.find { it.inGameStatus == InGameStatus.SEEKER.value && it.playerId == FirebaseHelper.uid!! }
+                if (seekerScanning != null) {
+                    filterPlayersList(playerList, seekerScanning)
+                }
             }
         return true
     }
