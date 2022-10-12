@@ -13,6 +13,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,10 +24,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -40,6 +44,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.budiyev.android.codescanner.AutoFocusMode
+import com.budiyev.android.codescanner.CodeScanner
+import com.budiyev.android.codescanner.CodeScannerView
+import com.budiyev.android.codescanner.DecodeCallback
+import com.budiyev.android.codescanner.ErrorCallback
+import com.budiyev.android.codescanner.ScanMode
+import com.example.seekers.ui.theme.*
 import com.budiyev.android.codescanner.*
 import com.example.seekers.ui.theme.avatarBackground
 import com.example.seekers.ui.theme.emailAvailable
@@ -50,6 +61,7 @@ import io.github.g0dkar.qrcode.QRCode
 import java.io.ByteArrayOutputStream
 import kotlin.math.PI
 import kotlin.math.cos
+import java.util.*
 
 fun generateQRCode(data: String): Bitmap {
     val fileOut = ByteArrayOutputStream()
@@ -118,16 +130,16 @@ fun CustomOutlinedTextField(
         onValueChange = onValueChange,
         isError = isError,
         colors = TextFieldDefaults.outlinedTextFieldColors(
-            errorBorderColor = Color.Red,
-            errorLabelColor = Color.Red,
-            errorCursorColor = Color.Red,
-            errorLeadingIconColor = Color.Red,
-            errorTrailingIconColor = Color.Red,
-            focusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            focusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            unfocusedBorderColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            unfocusedLabelColor = if (emailIsAvailable == true) emailAvailable else Color.Gray,
-            trailingIconColor = if (emailIsAvailable == true) emailAvailable else Color.Gray
+            errorBorderColor = SizzlingRed,
+            errorLabelColor = SizzlingRed,
+            errorCursorColor = SizzlingRed,
+            errorLeadingIconColor = SizzlingRed,
+            errorTrailingIconColor = SizzlingRed,
+            focusedBorderColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            focusedLabelColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            unfocusedBorderColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            unfocusedLabelColor = if (emailIsAvailable == true) emailAvailable else Raisin,
+            trailingIconColor = if (emailIsAvailable == true) emailAvailable else Raisin
         ),
         keyboardOptions = KeyboardOptions(
             imeAction = ImeAction.Done,
@@ -188,14 +200,31 @@ fun QRScanner(context: Context, onScanned: (String) -> Unit) {
 fun CustomButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
     val width = LocalConfiguration.current.screenWidthDp * 0.8
     Button(
+        border = BorderStroke(1.dp, Raisin),
         onClick = onClick,
         modifier = modifier
             .width(width.dp)
-            .height(50.dp)
-            .clip(RoundedCornerShape(10.dp)),
-        colors = ButtonDefaults.buttonColors(Color.LightGray, contentColor = Color.Black)
+            .height(50.dp),
+        shape = RoundedCornerShape(15),
+        colors = ButtonDefaults.outlinedButtonColors(Emerald, contentColor = Raisin)
     ) {
-        Text(text = text)
+        Text(text = text.uppercase(Locale.ROOT))
+    }
+}
+
+@Composable
+fun LogOutButton(modifier: Modifier = Modifier, text: String, onClick: () -> Unit) {
+    Button(
+        border = BorderStroke(1.dp, Color.White),
+        onClick = onClick,
+        modifier = modifier
+            .width(150.dp)
+            .height(50.dp),
+        shape = RoundedCornerShape(15),
+        colors = ButtonDefaults.outlinedButtonColors(SizzlingRed, contentColor = Color.White)
+    ) {
+        Icon(Icons.Default.ArrowBack, contentDescription = "", tint = Color.White)
+        Text(text = text.uppercase(Locale.ROOT))
     }
 }
 
@@ -207,12 +236,14 @@ fun IconButton(
     buttonColor: Color,
     onClick: () -> Unit
 ) {
+
     Button(
+        border = BorderStroke(1.dp, Raisin),
         onClick = onClick,
         modifier = modifier
-            .height(50.dp)
-            .clip(RoundedCornerShape(5.dp)),
-        colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Color.Black),
+            .height(50.dp),
+        shape = RoundedCornerShape(15),
+        colors = ButtonDefaults.buttonColors(buttonColor, contentColor = Raisin),
     ) {
         Box(
             modifier = Modifier.fillMaxWidth(),
@@ -232,7 +263,7 @@ fun IconButton(
                     tint = Color.Unspecified
                 )
             }
-            Text(text = buttonText)
+            Text(text = buttonText.uppercase(Locale.ROOT))
         }
     }
 }
@@ -252,9 +283,9 @@ fun VerticalSlider(
         // Text(text = value.toString(), fontSize = 10.sp)
         Slider(
             colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF838383),
-                activeTrackColor = Color(0xFF838383),
-                inactiveTrackColor = Color.LightGray
+                thumbColor = Emerald,
+                activeTrackColor = Emerald,
+                inactiveTrackColor = Raisin
             ),
             onValueChangeFinished = onValueChangeFinished,
             steps = steps,

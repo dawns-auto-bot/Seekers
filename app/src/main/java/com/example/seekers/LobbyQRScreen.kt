@@ -38,6 +38,7 @@ import com.example.seekers.general.CustomButton
 import com.example.seekers.general.IconButton
 import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.generateQRCode
+import com.example.seekers.ui.theme.SizzlingRed
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.GeoPoint
@@ -133,8 +134,11 @@ fun LobbyQRScreen(
                     } else {
                         showLeaveDialog = true
                     }
-                }) {
-                    Text(text = "Leave")
+                }, colors = ButtonDefaults.buttonColors(
+                    backgroundColor = SizzlingRed,
+                    contentColor = Color.White
+                )) {
+                    Text(text = "LEAVE")
                 }
             },
             backgroundColor = Color.Transparent,

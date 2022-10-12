@@ -15,8 +15,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.AndroidViewModel
@@ -45,9 +46,21 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.seekers.general.*
-import com.google.android.gms.location.*
-import com.google.android.gms.maps.model.*
+import com.example.seekers.general.CustomButton
+import com.example.seekers.general.QRCodeComponent
+import com.example.seekers.general.QRScanner
+import com.example.seekers.general.generateQRCode
+import com.example.seekers.general.toGrayscale
+import com.example.seekers.ui.theme.Powder
+import com.example.seekers.ui.theme.Raisin
+import com.example.seekers.ui.theme.Emerald
+import com.example.seekers.ui.theme.Mango
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.google.maps.android.compose.*
@@ -59,6 +72,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.*
 
+@OptIn(ExperimentalMaterialApi::class)
 @RequiresApi(Build.VERSION_CODES.Q)
 @SuppressLint("MissingPermission")
 @Composable
@@ -275,170 +289,298 @@ fun HeatMapScreen(
         }
     }
 
-    properties?.let { props ->
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (locationAllowed) {
-                HeatMap(
-                    state = cameraPositionState,
-                    center = center,
-                    radius = radius,
-                    properties = props,
-                    uiSettings = uiSettings,
-                    heatPositions = heatPositions,
-                    movingPlayers = movingPlayers,
-                    eliminatedPlayers = eliminatedPlayers,
-                    tileProvider = tileProvider,
-                    circleCoords = circleCoords
-                )
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberBottomDrawerState(BottomDrawerValue.Closed)
 
-                timer?.let {
-                    GameTimer(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(8.dp),
-                        vm = vm
-                    )
-                    LaunchedEffect(Unit) {
-                        it.start()
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(8.dp)
-                ) {
-                    Button(onClick = {
-                        showLeaveGameDialog = true
-                    }) {
-                        Text(text = "Leave")
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        showRadar = true
-                    },
-                    modifier = Modifier.align(Alignment.BottomEnd)
-                ) {
-                    Text(text = "Radar")
-                }
-
+    BottomDrawer(
+        gesturesEnabled = false,
+        drawerState = drawerState,
+        drawerContent = {
+            Surface(
+                shape = RoundedCornerShape(28.dp, 28.dp, 0.dp, 0.dp),
+                color = Emerald,
+                border = BorderStroke(1.dp, Raisin),
+            ) {
                 Row(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .fillMaxWidth()
+                        .background(color = Emerald)
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    QRButton {
-                        if (!showQR) {
-                            showQR = true
-                        }
-                    }
-                    QRScanButton {
-                        if (!cameraIsAllowed) {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        } else {
-                            cameraIsAllowed = true
-                        }
-                        if (!showQRScanner) {
-                            showQRScanner = true
-                        }
-                    }
-                    NewsButton(onClick = {
-                        showNews = true
-                        vm.hasNewNews.value = false
-                    }, hasNew = hasNewNews)
-
-                    PlayerListButton {
-                        if (!showPlayerList) {
-                            showPlayerList = true
-                        }
-                    }
-                }
-
-                if (showRadar) {
-                    RadarDialog(gameId = gameId) { showRadar = false }
-                }
-
-                if (showQR) {
-                    ShowMyQRDialog {
-                        showQR = false
-                    }
-                }
-
-                if (showQRScanner && cameraIsAllowed) {
-                    QRScannerDialog(onDismiss = { showQRScanner = false }) { id ->
-                        vm.setPlayerFound(gameId, id)
-                        players?.let {
-                            val found = it.find { player -> player.playerId == id }
-                            playerFound = found
-                        }
-                        showQRScanner = false
-                        showPlayerFound = true
-                    }
-                }
-
-                if (showPlayerFound) {
-                    PlayerFoundDialog(playerFound = playerFound, onCancel = {
-                        playerFound = null
-                        showPlayerFound = false
-                    }) {
-                        selfieLauncher.launch(null)
-                        showPlayerFound = false
-                    }
-                }
-
-                if (showLeaveGameDialog) {
-                    LeaveGameDialog(onDismissRequest = { showLeaveGameDialog = false }, onConfirm = {
-                        vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
-                        vm.stopService(context)
-                        navController.navigate(NavRoutes.StartGame.route)
-                    })
-                }
-
-                selfie?.let {
-                    if (showSendSelfie) {
-                        SendSelfieDialog(
-                            selfie = it,
-                            onDismiss = {
-                                playerFound = null
-                                selfie = null
-                                showSendSelfie = false
-                            },
-                            sendPic = {
-                                vm.sendSelfie(
-                                    playerFound!!.playerId,
-                                    gameId,
-                                    it,
-                                    playerFound!!.nickname
+                    IconButton(
+                        onClick = { scope.launch { drawerState.close() } },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = Raisin
                                 )
-                                playerFound = null
-                                selfie = null
-                                showSendSelfie = false
-                            }) {
-                            selfieLauncher.launch(null)
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            showRadar = true
+                        },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.Radar,
+                                    contentDescription = "Radar",
+                                    tint = Raisin
+                                )
+                                // Text(text = "Radar", color = Color.White)
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            if (isSeeker == true) {
+                                if (!cameraIsAllowed) {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                } else {
+                                    cameraIsAllowed = true
+                                }
+                                if (!showQRScanner) {
+                                    showQRScanner = true
+                                }
+                            } else {
+                                if (!showQR) {
+                                    showQR = true
+                                }
+                            }
+                        },
+                        modifier = Modifier.size(56.dp),
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                if (isSeeker == true)
+                                    Icon(
+                                        Icons.Default.QrCodeScanner,
+                                        contentDescription = "",
+                                        tint = Raisin,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                else
+                                    Icon(
+                                        Icons.Default.QrCode,
+                                        contentDescription = "",
+                                        tint = Raisin,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                            if (!showPlayerList) {
+                                showPlayerList = true
+                            }
+                        },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.List, contentDescription = "", tint = Raisin)
+                                // Text(text = "Players", color = Color.White)
+                            }
+                        })
+                    IconButton(
+                        onClick = {
+                            vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
+                            vm.stopService(context)
+                            navController.navigate(NavRoutes.StartGame.route)
+                        },
+                        content = {
+                            Column(
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    Icons.Default.ExitToApp,
+                                    contentDescription = "",
+                                    tint = Color.Red
+                                )
+
+                            }
+                        })
+                }
+            }
+
+        },
+        drawerBackgroundColor = Color.Transparent,
+        drawerElevation = 0.dp,
+        content = {
+            Scaffold(
+                floatingActionButtonPosition = FabPosition.Center,
+                isFloatingActionButtonDocked = true,
+                floatingActionButton = {
+
+                    FloatingActionButton(
+                        elevation = FloatingActionButtonDefaults.elevation(8.dp),
+                        modifier = Modifier.border(BorderStroke(1.dp, Raisin), shape = CircleShape),
+                        shape = CircleShape,
+                        backgroundColor = Emerald,
+                        contentColor = Raisin,
+                        onClick = {
+                            scope.launch { drawerState.open() }
+                        }
+                    ) {
+                        Icon(Icons.Filled.Dashboard, "", modifier = Modifier.size(38.dp))
+                    }
+                },
+            ) {
+                properties?.let { props ->
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (locationAllowed) {
+                            HeatMap(
+                                state = cameraPositionState,
+                                center = center,
+                                radius = radius,
+                                properties = props,
+                                uiSettings = uiSettings,
+                                heatPositions = heatPositions,
+                                movingPlayers = movingPlayers,
+                                eliminatedPlayers = eliminatedPlayers,
+                                tileProvider = tileProvider,
+                                circleCoords = circleCoords
+                            )
+                            Card(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(12.dp)
+                                    .height(44.dp)
+                                    .fillMaxWidth(),
+                                backgroundColor = Emerald,
+                                border = BorderStroke(1.dp, Raisin),
+                                shape = RoundedCornerShape(5.dp)
+                            ) {
+                                Row(
+                                    Modifier.padding(8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row() {
+                                        Icon(
+                                            Icons.Default.PermIdentity,
+                                            contentDescription = "",
+                                            tint = Raisin
+                                        )
+                                        Text(text = "3/8", color = Raisin, fontSize = 20.sp)
+                                    }
+
+                                    timer?.let {
+                                        GameTimer(vm = vm)
+                                        LaunchedEffect(Unit) {
+                                            it.start()
+                                        }
+                                    }
+
+                                    NewsButton(onClick = {
+                                        showNews = true
+                                        vm.hasNewNews.value = false
+                                    }, hasNew = hasNewNews)
+
+                                }
+                            }
+
+                            if (showRadar) {
+                                RadarDialog(gameId = gameId) { showRadar = false }
+                            }
+
+                            if (showQR) {
+                                ShowMyQRDialog {
+                                    showQR = false
+                                }
+                            }
+
+                            if (showQRScanner && cameraIsAllowed) {
+                                QRScannerDialog(onDismiss = { showQRScanner = false }) { id ->
+                                    vm.setPlayerFound(gameId, id)
+                                    players?.let {
+                                        val found = it.find { player -> player.playerId == id }
+                                        playerFound = found
+                                    }
+                                    showQRScanner = false
+                                    showPlayerFound = true
+                                }
+                            }
+
+                            if (showPlayerFound) {
+                                PlayerFoundDialog(playerFound = playerFound, onCancel = {
+                                    playerFound = null
+                                    showPlayerFound = false
+                                }) {
+                                    selfieLauncher.launch(null)
+                                    showPlayerFound = false
+                                }
+                            }
+
+                            if (showLeaveGameDialog) {
+                                LeaveGameDialog(onDismissRequest = { showLeaveGameDialog = false }, onConfirm = {
+                                    vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
+                                    vm.stopService(context)
+                                    navController.navigate(NavRoutes.StartGame.route)
+                                })
+                            }
+
+                            selfie?.let {
+                                if (showSendSelfie) {
+                                    SendSelfieDialog(
+                                        selfie = it,
+                                        onDismiss = {
+                                            playerFound = null
+                                            selfie = null
+                                            showSendSelfie = false
+                                        },
+                                        sendPic = {
+                                            vm.sendSelfie(
+                                                playerFound!!.playerId,
+                                                gameId,
+                                                it,
+                                                playerFound!!.nickname
+                                            )
+                                            playerFound = null
+                                            selfie = null
+                                            showSendSelfie = false
+                                        }) {
+                                        selfieLauncher.launch(null)
+                                    }
+                                }
+                            }
+
+                            if (showNews && news != null) {
+                                NewsDialog(newsList = news!!, gameId = gameId) {
+                                    showNews = false
+                                }
+                            }
+
+                            if (showPlayerList && players != null) {
+                                PlayerListDialog(onDismiss = { showPlayerList = false }, players = players!!)
+                            }
+
+                            BackHandler(enabled = true) {
+                                showLeaveGameDialog = true
+                            }
+
+                        } else {
+                            Text(text = "Location permission needed")
                         }
                     }
                 }
-
-                if (showNews && news != null) {
-                    NewsDialog(newsList = news!!, gameId = gameId) {
-                        showNews = false
-                    }
-                }
-
-                if (showPlayerList && players != null) {
-                    PlayerListDialog(onDismiss = { showPlayerList = false }, players = players!!)
-                }
-                BackHandler(enabled = true) {
-                    showLeaveGameDialog = true
-                }
-            } else {
-                Text(text = "Location permission needed")
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -687,18 +829,14 @@ fun QRScannerDialog(onDismiss: () -> Unit, onScanned: (String) -> Unit) {
 }
 
 @Composable
-fun GameTimer(modifier: Modifier = Modifier, vm: HeatMapViewModel) {
+fun GameTimer(vm: HeatMapViewModel) {
     val countdown by vm.countdown.observeAsState()
     countdown?.let {
-        Card(
-            modifier = modifier,
-            backgroundColor = Color.LightGray,
-            shape = RoundedCornerShape(25.dp)
-        ) {
-            Row(Modifier.padding(8.dp)) {
-                Text(text = secondsToText(it))
-            }
+        Row(modifier = Modifier.border(BorderStroke(1.dp, Raisin)).padding(2.dp)) {
+            Icon(Icons.Default.Alarm, contentDescription = "", tint = Raisin)
+            Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
         }
+
     }
 }
 
@@ -975,11 +1113,11 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 //source: https://stackoverflow.com/questions/6048975/google-maps-v3-how-to-calculate-the-zoom-level-for-a-given-bounds
 fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
     val WORLD_DIM = Size(256, 256)
-    val ZOOM_MAX = 21.toDouble();
+    val ZOOM_MAX = 21.toDouble()
 
     fun latRad(lat: Double): Double {
-        val sin = sin(lat * Math.PI / 180);
-        val radX2 = ln((1 + sin) / (1 - sin)) / 2;
+        val sin = sin(lat * Math.PI / 180)
+        val radX2 = ln((1 + sin) / (1 - sin)) / 2
         return max(min(radX2, Math.PI), -Math.PI) / 2
     }
 
@@ -987,20 +1125,20 @@ fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
         return floor(ln(mapPx / worldPx / fraction) / ln(2.0))
     }
 
-    val ne = bounds.northeast;
-    val sw = bounds.southwest;
+    val ne = bounds.northeast
+    val sw = bounds.southwest
 
-    val latFraction = (latRad(ne.latitude) - latRad(sw.latitude)) / Math.PI;
+    val latFraction = (latRad(ne.latitude) - latRad(sw.latitude)) / Math.PI
 
-    val lngDiff = ne.longitude - sw.longitude;
+    val lngDiff = ne.longitude - sw.longitude
     val lngFraction = if (lngDiff < 0) {
         (lngDiff + 360) / 360
     } else {
         (lngDiff / 360)
     }
 
-    val latZoom = zoom(mapDim.height, WORLD_DIM.height, latFraction);
-    val lngZoom = zoom(mapDim.width, WORLD_DIM.width, lngFraction);
+    val latZoom = zoom(mapDim.height, WORLD_DIM.height, latFraction)
+    val lngZoom = zoom(mapDim.width, WORLD_DIM.width, lngFraction)
 
     return minOf(latZoom, lngZoom, ZOOM_MAX)
 }

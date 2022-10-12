@@ -6,6 +6,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
@@ -14,6 +17,13 @@ import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.material.Card
+import androidx.compose.material.Divider
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -23,7 +33,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -32,6 +50,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.seekers.general.CustomButton
+import com.example.seekers.general.LogOutButton
+import com.example.seekers.ui.theme.Powder
+import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.general.getPermissionLauncher
 import com.example.seekers.general.isPermissionGranted
 import com.google.firebase.auth.ktx.auth
@@ -42,6 +63,7 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
     val context = LocalContext.current
     var showPermissionDialog by remember { mutableStateOf(false) }
     var showLogOutDialog by remember { mutableStateOf(false) }
+    val screenHeight = LocalConfiguration.current.screenHeightDp * 0.3
 
     LaunchedEffect(Unit) {
         vm.checkAllPermissions(context)
@@ -51,20 +73,91 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
     }
 
     Surface {
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Powder)) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .padding(8.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                CustomButton(text = "Create lobby") {
-                    navController.navigate(NavRoutes.AvatarPicker.route + "/true")
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(screenHeight.dp)
+                        .padding(horizontal = 15.dp, vertical = 5.dp)
+                        .clickable { navController.navigate(NavRoutes.AvatarPicker.route + "/true") },
+                    elevation = 10.dp
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Image(
+                            painter = painterResource(R.drawable.illustration1),
+                            contentDescription = "illustration",
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            alignment = Alignment.CenterStart
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(32.dp)
+                        ) {
+                            Column {
+                                Text(text = "CREATE\nLOBBY", fontSize = 22.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .width(50.dp)
+                                        .height(1.dp)
+                                        .background(color = Raisin)
+                                )
+                            }
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.height(50.dp))
-                CustomButton(text = "Join lobby") {
-                    navController.navigate(NavRoutes.AvatarPicker.route + "/false")
+                // Spacer(modifier = Modifier.height(50.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(screenHeight.dp)
+                        .padding(horizontal = 15.dp, vertical = 5.dp)
+
+                        .clickable { navController.navigate(NavRoutes.AvatarPicker.route + "/false") },
+                    elevation = 10.dp
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Image(
+                            painter = painterResource(R.drawable.illustration2),
+                            contentDescription = "illustration",
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            alignment = Alignment.CenterEnd
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(32.dp)
+                        ) {
+                            Column {
+                                Text(text = "JOIN\nLOBBY", fontSize = 22.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .width(50.dp)
+                                        .height(1.dp)
+                                        .background(color = Raisin)
+                                )
+                            }
+                        }
+                    }
+
+                    /*
+                    CustomButton(text = "Join lobby") {
+                        navController.navigate(NavRoutes.AvatarPicker.route + "/false")
+                    } */
                 }
+
             }
             Text(
                 text = "${FirebaseHelper.uid}", modifier = Modifier
@@ -76,10 +169,10 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
                     .align(Alignment.TopEnd)
                     .padding(32.dp)
             ) {
-                Button(onClick = {
-                    showLogOutDialog = true
-                }) {
-                    Text("Log out")
+                LogOutButton(text = "Log out") {
+                    Firebase.auth.signOut()
+                    println("logged user: ${Firebase.auth.currentUser}")
+                    navController.navigate(NavRoutes.MainScreen.route)
                 }
             }
         }
@@ -97,92 +190,6 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
     BackHandler(enabled = true) {
         showLogOutDialog = true
     }
-}
-
-@Composable
-fun LogOutDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        title = { Text(text = "Logging out?") },
-        text = { Text(text = "Are you sure you want to log out?") },
-        onDismissRequest = onDismissRequest,
-        dismissButton = {
-            Button(onClick = { onDismissRequest() }) {
-                Text(text = "Cancel")
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm() }) {
-                Text(text = "Log Out")
-            }
-        }
-    )
-}
-
-class PermissionsViewModel : ViewModel() {
-    val coarseLocPerm = MutableLiveData<Boolean>()
-    val fineLocPerm = MutableLiveData<Boolean>()
-    val backgroundLocPerm = MutableLiveData<Boolean>()
-    val cameraPerm = MutableLiveData<Boolean>()
-    val activityRecPerm = MutableLiveData<Boolean>()
-    val foregroundServPerm = MutableLiveData<Boolean>()
-
-    fun getLiveData(requiredPermission: RequiredPermission): MutableLiveData<Boolean> {
-        return when (requiredPermission) {
-            RequiredPermission.COARSE_LOCATION -> coarseLocPerm
-            RequiredPermission.FINE_LOCATION -> fineLocPerm
-            RequiredPermission.BACKGROUND_LOCATION -> backgroundLocPerm
-            RequiredPermission.CAMERA -> cameraPerm
-            RequiredPermission.ACTIVITY_RECOGNITION -> activityRecPerm
-            RequiredPermission.FOREGROUND_SERVICE -> foregroundServPerm
-        }
-    }
-
-    fun checkAllPermissions(context: Context) {
-        RequiredPermission.values().forEach {
-            getLiveData(it).value = isPermissionGranted(context, it.value)
-        }
-    }
-
-    fun allPermissionsAllowed(): Boolean {
-        return coarseLocPerm.value == true
-                && fineLocPerm.value == true
-                && backgroundLocPerm.value == true
-                && cameraPerm.value == true
-                && activityRecPerm.value == true
-                && foregroundServPerm.value == true
-    }
-}
-
-
-enum class RequiredPermission(val value: String, val text: String, val explanation: String) {
-    COARSE_LOCATION(
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-        "\uD83D\uDCCD Coarse location",
-        "to locate other players on the map"
-    ),
-    FINE_LOCATION(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        "\uD83D\uDCCD Fine location",
-        "to get accurate locations"
-    ),
-    BACKGROUND_LOCATION(
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION,
-        "\uD83D\uDCCD Background location (All the time)",
-        "to send locations even when your screen is off"
-    ),
-    CAMERA(
-        Manifest.permission.CAMERA, "\uD83D\uDCF7 Camera",
-        "to scan QR codes and take pictures"
-    ),
-    ACTIVITY_RECOGNITION(
-        Manifest.permission.ACTIVITY_RECOGNITION,
-        "\uD83D\uDC5F Activity recognition",
-        "to count your steps"
-    ),
-    FOREGROUND_SERVICE(
-        Manifest.permission.FOREGROUND_SERVICE, "\uD83D\uDD14 Foreground Service",
-        "to keep the game on even when your screen is off"
-    ),
 }
 
 @OptIn(ExperimentalComposeUiApi::class)

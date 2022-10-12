@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.seekers.general.CustomButton
 import com.example.seekers.general.VerticalSlider
+import com.example.seekers.ui.theme.EmeraldTransparent1
+import com.example.seekers.ui.theme.EmeraldTransparent2
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 
@@ -38,8 +40,8 @@ fun AreaSelectionMap(
                     state.position.target.longitude
                 ),
                 radius = radius.toDouble(),
-                fillColor = Color(0x19FFDE00),
-                strokeColor = Color(0x8DBDA500),
+                fillColor = EmeraldTransparent2,
+                strokeColor = EmeraldTransparent1,
                 clickable = true
             )
         }
