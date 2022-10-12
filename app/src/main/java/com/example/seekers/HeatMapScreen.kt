@@ -115,6 +115,10 @@ fun HeatMapScreen(
     var showSendSelfie by remember { mutableStateOf(false) }
     var showNews by remember { mutableStateOf(false) }
     var circleCoords by remember { mutableStateOf(listOf<LatLng>()) }
+    val stepCounterVewModel = StepCounterVewModel(context)
+    val steps by stepCounterVewModel.steps.observeAsState()
+
+    getActivityRecognitionPermission(context)
 
     val locationPermissionLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { allowed ->
@@ -184,10 +188,12 @@ fun HeatMapScreen(
         lobbyStatus?.let {
             when (it) {
                 LobbyStatus.ACTIVE.value ->{
-
+                    stepCounterVewModel.startStepCounter()
                 }
 
                 LobbyStatus.FINISHED.value -> {
+                    stepCounterVewModel.stopStepCounter()
+                    Log.d("steps", steps.toString())
                     Toast.makeText(context, "The game has ended", Toast.LENGTH_LONG).show()
                     /*
                     * Steps
