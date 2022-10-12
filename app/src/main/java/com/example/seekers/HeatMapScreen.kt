@@ -6,6 +6,10 @@ import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Build
 import android.os.CountDownTimer
 import android.util.Log
@@ -44,6 +48,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.seekers.general.*
@@ -179,7 +184,7 @@ fun HeatMapScreen(
         lobbyStatus?.let {
             when (it) {
                 LobbyStatus.ACTIVE.value ->{
-
+                    
                 }
 
                 LobbyStatus.FINISHED.value -> {
@@ -1143,3 +1148,60 @@ fun getBoundsZoomLevel(bounds: LatLngBounds, mapDim: Size): Double {
     return minOf(latZoom, lngZoom, ZOOM_MAX)
 }
 
+class StepCounterVewModel(context: Context): ViewModel(){
+    var steps = MutableLiveData("0")
+    var distance = MutableLiveData(0.0F)
+    var running  = MutableLiveData(false)
+    val stepLength = 0.78F
+
+    var initialSteps = MutableLiveData(-2)
+    private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    val stepCounterSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+
+    //https://www.geeksforgeeks.org/proximity-sensor-in-android-app-using-jetpack-compose/
+    private val sensorEventListener = object: SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            if(event.sensor == stepCounterSensor){
+                if(running.value == true){
+                    event.values.firstOrNull()?.toInt().let { newSteps ->
+                        if (initialSteps.value == -2) {
+                            initialSteps.value = newSteps!!
+                        }
+                        val currentSteps = newSteps?.minus(initialSteps.value!!)
+                        if (currentSteps != null) {
+                            steps.value = currentSteps.toString()
+                            Log.d("steps", steps.value!!)
+                        }
+                    }
+                }
+                //steps.value = event.values[0]
+            }
+        }
+
+
+        override fun onAccuracyChanged(sensor: Sensor?, p1: Int) {
+            Log.d("something", "something")
+        }
+    }
+
+    fun startStepCounter(){
+        running.value=true
+        sensorManager.registerListener(
+            sensorEventListener,
+            stepCounterSensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        //Toast.makeText(context, "Start", Toast.LENGTH_SHORT).show()
+    }
+
+    fun stopStepCounter(){
+        running.value=false
+        sensorManager.unregisterListener(sensorEventListener)
+        //Toast.makeText(context, "Stop", Toast.LENGTH_SHORT).show()
+        initialSteps.value = -2
+    }
+    fun countDistance(){
+        val length = stepLength.times(steps.value!!.toFloat())
+        distance.value=length
+    }
+}
