@@ -226,7 +226,7 @@ fun HeatMapScreen(
             with(density) {
                 LocalConfiguration.current.screenWidthDp.dp.toPx()
             }
-                .times(0.7).toInt()
+                .times(0.5).toInt()
         LaunchedEffect(center) {
             lobby?.let {
                 minZoom = getBoundsZoomLevel(
@@ -433,31 +433,53 @@ fun HeatMapScreen(
                                 border = BorderStroke(1.dp, Raisin),
                                 shape = RoundedCornerShape(5.dp)
                             ) {
-                                Row(
+                                Box(
                                     Modifier.padding(8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row() {
-                                        Icon(
-                                            Icons.Default.PermIdentity,
-                                            contentDescription = "",
-                                            tint = Raisin
-                                        )
-                                        Text(text = "3/8", color = Raisin, fontSize = 20.sp)
-                                    }
-
-                                    timer?.let {
-                                        GameTimer(vm = vm)
-                                        LaunchedEffect(Unit) {
-                                            it.start()
+                                    players?.let {
+                                        val total =
+                                            it.count { player ->
+                                                player.inGameStatus != InGameStatus.LEFT.ordinal
+                                            }
+                                        val hidingAmount =
+                                            it.count { player ->
+                                                player.inGameStatus == InGameStatus.PLAYER.ordinal
+                                                        || player.inGameStatus == InGameStatus.MOVING.ordinal
+                                            }
+                                        Row(
+                                            modifier = Modifier.align(Alignment.CenterStart),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                Icons.Default.PermIdentity,
+                                                contentDescription = "",
+                                                tint = Raisin
+                                            )
+                                            Text(
+                                                text = "$hidingAmount/$total",
+                                                color = Raisin,
+                                                fontSize = 16.sp
+                                            )
                                         }
                                     }
 
-                                    NewsButton(onClick = {
-                                        showNews = true
-                                        vm.hasNewNews.value = false
-                                    }, hasNew = hasNewNews)
+
+                                    timer?.let {
+                                        Box(modifier = Modifier.align(Alignment.Center)) {
+                                            GameTimer(vm = vm)
+                                            LaunchedEffect(Unit) {
+                                                it.start()
+                                            }
+                                        }
+                                    }
+
+                                    Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                                        NewsButton(onClick = {
+                                            showNews = true
+                                            vm.hasNewNews.value = false
+                                        }, hasNew = hasNewNews)
+                                    }
+
 
                                 }
                             }
@@ -495,9 +517,11 @@ fun HeatMapScreen(
                             }
 
                             if (showLeaveGameDialog) {
-                                LeaveGameDialog(onDismissRequest = { showLeaveGameDialog = false }, onConfirm = {
-                                    vm.leaveGame(gameId, context, navController)
-                                })
+                                LeaveGameDialog(
+                                    onDismissRequest = { showLeaveGameDialog = false },
+                                    onConfirm = {
+                                        vm.leaveGame(gameId, context, navController)
+                                    })
                             }
 
                             selfie?.let {
@@ -532,7 +556,10 @@ fun HeatMapScreen(
                             }
 
                             if (showPlayerList && players != null) {
-                                PlayerListDialog(onDismiss = { showPlayerList = false }, players = players!!)
+                                PlayerListDialog(
+                                    onDismiss = { showPlayerList = false },
+                                    players = players!!
+                                )
                             }
 
                             BackHandler(enabled = true) {
@@ -600,7 +627,11 @@ fun NewsDialog(newsList: List<News>, gameId: String, onDismiss: () -> Unit) {
                 .fillMaxWidth(), backgroundColor = Color.White, shape = RoundedCornerShape(8.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Events", style = MaterialTheme.typography.h6, modifier = Modifier.padding(vertical = 16.dp))
+                Text(
+                    text = "Events",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
                 LazyColumn(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
@@ -667,7 +698,8 @@ fun NewsItem(news: News, gameId: String) {
 }
 
 fun timeStampToTimeString(timestamp: Timestamp): String? {
-    val localDateTime = timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+    val localDateTime =
+        timestamp.toDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
     val formatter = DateTimeFormatter.ofPattern("HH:mm")
     return localDateTime.format(formatter)
 }
@@ -775,11 +807,16 @@ fun QRScannerDialog(onDismiss: () -> Unit, onScanned: (String) -> Unit) {
 fun GameTimer(vm: HeatMapViewModel) {
     val countdown by vm.countdown.observeAsState()
     countdown?.let {
-        Row(modifier = Modifier
-            .border(BorderStroke(1.dp, Raisin))
-            .padding(2.dp)) {
+        Row(
+            modifier = Modifier
+                .border(BorderStroke(1.dp, Raisin))
+                .padding(2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Icon(Icons.Default.Alarm, contentDescription = "", tint = Raisin)
-            Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
+            Box(modifier = Modifier.width(90.dp)) {
+                Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
+            }
         }
     }
 }

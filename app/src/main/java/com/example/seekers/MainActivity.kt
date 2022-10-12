@@ -303,6 +303,10 @@ fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavCont
                 LobbyStatus.ACTIVE.ordinal -> {
                     navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
                 }
+                //replace with endGameScreen
+                else -> {
+                    navController.navigate(NavRoutes.StartGame.route)
+                }
             }
         }
     }
