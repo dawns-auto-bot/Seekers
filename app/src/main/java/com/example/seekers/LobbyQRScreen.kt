@@ -14,6 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.DoorBack
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -82,7 +85,11 @@ fun LobbyQRScreen(
             when (it.status) {
                 LobbyStatus.DELETED.ordinal -> {
                     if (isCreator != true) {
-                        Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
+                        Toast.makeText(
+                            context,
+                            "The lobby was closed by the host",
+                            Toast.LENGTH_LONG
+                        )
                             .show()
                     }
                     vm.updateUser(FirebaseHelper.uid!!, mapOf(Pair("currentGameId", "")))
@@ -114,38 +121,44 @@ fun LobbyQRScreen(
 
     Scaffold(topBar = {
         TopAppBar(
-            title = {
-                Text(
-                    text = "Scan QR to join!",
-                    fontSize = 20.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(15.dp)
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = {
+            backgroundColor = Color.Transparent,
+            elevation = 0.dp
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                IconButton(modifier = Modifier.align(Alignment.CenterStart), onClick = {
                     showQRDialog = true
                 }) {
                     Icon(Icons.Outlined.QrCode2, "QR", modifier = Modifier.size(40.dp))
                 }
-            },
-            actions = {
-                Button(onClick = {
-                    if (isCreator == true) {
-                        showDismissDialog = true
-                    } else {
-                        showLeaveDialog = true
-                    }
-                }, colors = ButtonDefaults.buttonColors(
+                Text(
+                    text = "Scan QR to join!",
+                    fontSize = 20.sp,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+                Card(
                     backgroundColor = SizzlingRed,
-                    contentColor = Color.White
-                )) {
-                    Text(text = "LEAVE")
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .clickable {
+                            if (isCreator == true) {
+                                showDismissDialog = true
+                            } else {
+                                showLeaveDialog = true
+                            }
+                        }) {
+                    Icon(
+                        imageVector = Icons.Filled.Logout,
+                        contentDescription = "Leave",
+                        tint = Color.White,
+                        modifier = Modifier.padding(8.dp)
+                    )
                 }
-            },
-            backgroundColor = Color.Transparent,
-            elevation = 0.dp
-        )
+            }
+        }
     }
     ) {
         Column(
@@ -274,7 +287,8 @@ fun EditRulesDialog(
                         Box(modifier = Modifier.padding(40.dp, 0.dp, 40.dp, 0.dp)) {
                             CustomButton(text = "Save") {
                                 if (maxPlayers != null && timeLimit != null && radius != null && countdown != null && center != null) {
-                                    val centerGeoPoint = GeoPoint(center!!.latitude, center!!.longitude)
+                                    val centerGeoPoint =
+                                        GeoPoint(center!!.latitude, center!!.longitude)
                                     val changeMap = mapOf(
                                         Pair("center", centerGeoPoint),
                                         Pair("maxPlayers", maxPlayers!!),
@@ -287,7 +301,11 @@ fun EditRulesDialog(
                                         .show()
                                     onDismissRequest()
                                 } else {
-                                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT)
+                                    Toast.makeText(
+                                        context,
+                                        "Please fill all fields",
+                                        Toast.LENGTH_SHORT
+                                    )
                                         .show()
                                 }
                             }
@@ -460,7 +478,7 @@ fun Participants(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        item { 
+        item {
             Spacer(modifier = Modifier.height(4.dp))
         }
         itemsIndexed(players.sortedBy { it.inLobbyStatus }) { index, player ->
