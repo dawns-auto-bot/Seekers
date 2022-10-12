@@ -63,8 +63,8 @@ fun QrScannerScreen(
                 nickname = nickname,
                 avatarId = avatarId,
                 playerId = FirebaseHelper.uid!!,
-                inLobbyStatus = InLobbyStatus.JOINED.value,
-                inGameStatus = InGameStatus.PLAYER.value
+                inLobbyStatus = InLobbyStatus.JOINED.ordinal,
+                inGameStatus = InGameStatus.PLAYER.ordinal
             )
             firestore.addPlayer(player, it)
             firestore.updateUser(

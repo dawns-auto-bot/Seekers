@@ -178,7 +178,7 @@ fun HeatMapScreen(
     LaunchedEffect(lobbyStatus) {
         lobbyStatus?.let {
             when (it) {
-                LobbyStatus.FINISHED.value -> {
+                LobbyStatus.FINISHED.ordinal -> {
                     Toast.makeText(context, "The game has ended", Toast.LENGTH_LONG).show()
                     /*
                     * Steps
@@ -195,9 +195,9 @@ fun HeatMapScreen(
         println("playerStatus $playerStatus")
         playerStatus?.let {
             if (isSeeker == null) {
-                val thisPlayerIsSeeker = (it == InGameStatus.SEEKER.value)
+                val thisPlayerIsSeeker = (it == InGameStatus.SEEKER.ordinal)
                 vm.updateIsSeeker(thisPlayerIsSeeker)
-                if (it != InGameStatus.ELIMINATED.value) {
+                if (it != InGameStatus.ELIMINATED.ordinal) {
                     vm.startService(
                         context = context,
                         gameId = gameId,
@@ -206,10 +206,10 @@ fun HeatMapScreen(
                 }
                 return@LaunchedEffect
             }
-            if (it == InGameStatus.ELIMINATED.value) {
+            if (it == InGameStatus.ELIMINATED.ordinal) {
                 showQR = false
                 vm.stopService(context)
-                vm.setPlayerInGameStatus(InGameStatus.SEEKER.value, gameId, FirebaseHelper.uid!!)
+                vm.setPlayerInGameStatus(InGameStatus.SEEKER.ordinal, gameId, FirebaseHelper.uid!!)
                 vm.updateIsSeeker(true)
                 vm.startService(context = context, gameId = gameId, isSeeker = true)
                 Toast.makeText(context, "You are now a seeker!", Toast.LENGTH_SHORT).show()
@@ -393,9 +393,7 @@ fun HeatMapScreen(
                         })
                     IconButton(
                         onClick = {
-                            vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
-                            vm.stopService(context)
-                            navController.navigate(NavRoutes.StartGame.route)
+                            showLeaveGameDialog = true
                         },
                         content = {
                             Column(
@@ -524,9 +522,7 @@ fun HeatMapScreen(
 
                             if (showLeaveGameDialog) {
                                 LeaveGameDialog(onDismissRequest = { showLeaveGameDialog = false }, onConfirm = {
-                                    vm.updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
-                                    vm.stopService(context)
-                                    navController.navigate(NavRoutes.StartGame.route)
+                                    vm.leaveGame(gameId, context, navController)
                                 })
                             }
 
@@ -871,14 +867,14 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         players.filter { it.playerId != FirebaseHelper.uid!! }
     }
     val heatPositions = Transformations.map(playersWithoutSelf) { players ->
-        players.filter { it.inGameStatus == InGameStatus.PLAYER.value }
+        players.filter { it.inGameStatus == InGameStatus.PLAYER.ordinal }
             .map { LatLng(it.location.latitude, it.location.longitude) }
     }
     val movingPlayers = Transformations.map(playersWithoutSelf) { players ->
-        players.filter { it.inGameStatus == InGameStatus.MOVING.value }
+        players.filter { it.inGameStatus == InGameStatus.MOVING.ordinal }
     }
     val eliminatedPlayers = Transformations.map(playersWithoutSelf) { players ->
-        players.filter { it.inGameStatus == InGameStatus.ELIMINATED.value }
+        players.filter { it.inGameStatus == InGameStatus.ELIMINATED.ordinal }
     }
     val statuses = Transformations.map(players) { players ->
         players.map { it.inGameStatus }
@@ -890,82 +886,82 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
             Player(
                 nickname = "player 1",
                 avatarId = 1,
-                inGameStatus = InGameStatus.PLAYER.value,
+                inGameStatus = InGameStatus.PLAYER.ordinal,
                 location = GeoPoint(60.22338389989929, 24.756749169655805),
                 playerId = "player 1",
-                distanceStatus = PlayerDistance.WITHIN50.value
+                distanceStatus = PlayerDistance.WITHIN50.ordinal
             ),
             Player(
                 nickname = "player 2",
                 avatarId = 5,
-                inGameStatus = InGameStatus.MOVING.value,
+                inGameStatus = InGameStatus.MOVING.ordinal,
                 location = GeoPoint(60.22374887627318, 24.759200708558442),
                 playerId = "player 2",
-                distanceStatus = PlayerDistance.WITHIN100.value
+                distanceStatus = PlayerDistance.WITHIN100.ordinal
             ),
             Player(
                 nickname = "player 3",
                 avatarId = 1,
-                inGameStatus = InGameStatus.PLAYER.value,
+                inGameStatus = InGameStatus.PLAYER.ordinal,
                 location = GeoPoint(60.223032239987354, 24.758830563735074),
                 playerId = "player 3",
-                distanceStatus = PlayerDistance.WITHIN10.value
+                distanceStatus = PlayerDistance.WITHIN10.ordinal
             ),
             Player(
                 nickname = "player 4",
                 avatarId = 1,
-                inGameStatus = InGameStatus.MOVING.value,
+                inGameStatus = InGameStatus.MOVING.ordinal,
                 location = GeoPoint(60.224550744400226, 24.756561415035257),
                 playerId = "player 4",
-                distanceStatus = PlayerDistance.WITHIN50.value
+                distanceStatus = PlayerDistance.WITHIN50.ordinal
             ),
             Player(
                 nickname = "player 5",
                 avatarId = 1,
-                inGameStatus = InGameStatus.ELIMINATED.value,
+                inGameStatus = InGameStatus.ELIMINATED.ordinal,
                 location = GeoPoint(60.223405212500005, 24.75958158221728),
                 playerId = "player 5",
-                distanceStatus = PlayerDistance.WITHIN50.value
+                distanceStatus = PlayerDistance.WITHIN50.ordinal
             ),
             Player(
                 nickname = "player 6",
                 avatarId = 1,
-                inGameStatus = InGameStatus.PLAYER.value,
+                inGameStatus = InGameStatus.PLAYER.ordinal,
                 location = GeoPoint(60.223841983003645, 24.759626485065098),
                 playerId = "player 6",
-                distanceStatus = PlayerDistance.WITHIN50.value
+                distanceStatus = PlayerDistance.WITHIN50.ordinal
             ),
             Player(
                 nickname = "player 7",
                 avatarId = 5,
-                inGameStatus = InGameStatus.MOVING.value,
+                inGameStatus = InGameStatus.MOVING.ordinal,
                 location = GeoPoint(60.22357557804847, 24.756681419911455),
                 playerId = "player 7",
-                distanceStatus = PlayerDistance.WITHIN100.value
+                distanceStatus = PlayerDistance.WITHIN100.ordinal
             ),
             Player(
                 nickname = "player 8",
                 avatarId = 1,
-                inGameStatus = InGameStatus.PLAYER.value,
+                inGameStatus = InGameStatus.PLAYER.ordinal,
                 location = GeoPoint(60.22314399742664, 24.757781125478843),
                 playerId = "player 8",
-                distanceStatus = PlayerDistance.WITHIN10.value
+                distanceStatus = PlayerDistance.WITHIN10.ordinal
             ),
             Player(
                 nickname = "player 9",
                 avatarId = 1,
-                inGameStatus = InGameStatus.MOVING.value,
+                inGameStatus = InGameStatus.MOVING.ordinal,
                 location = GeoPoint(60.22311735646131, 24.759814239674167),
                 playerId = "player 9",
-                distanceStatus = PlayerDistance.WITHIN50.value
+                distanceStatus = PlayerDistance.WITHIN50.ordinal
             ),
             Player(
                 nickname = "player 10",
                 avatarId = 1,
-                inGameStatus = InGameStatus.ELIMINATED.value,
+                inGameStatus = InGameStatus.ELIMINATED.ordinal,
                 location = GeoPoint(60.223405212500005, 24.75958158221728),
                 playerId = "player 10",
-                distanceStatus = PlayerDistance.WITHIN50.value
+                distanceStatus = PlayerDistance.WITHIN50.ordinal
             ),
         )
         mockPlayers.forEach {
@@ -1036,10 +1032,14 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 
     fun setPlayerFound(gameId: String, playerId: String) {
         val changeMap = mapOf(
-            Pair("inGameStatus", InGameStatus.ELIMINATED.value),
+            Pair("inGameStatus", InGameStatus.ELIMINATED.ordinal),
             Pair("timeOfElimination", Timestamp.now())
         )
         firestore.updatePlayer(changeMap, playerId, gameId)
+    }
+
+    fun removePlayer(gameId: String, playerId: String) {
+        firestore.removePlayer(gameId, playerId)
     }
 
     fun sendSelfie(foundPlayerId: String, gameId: String, selfie: Bitmap, nickname: String) {
@@ -1058,6 +1058,13 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
                 hasNewNews.value = true
             }
         }
+    }
+
+    fun leaveGame(gameId: String, context: Context, navController: NavHostController) {
+        updateUser(mapOf(Pair("currentGameId", "")), FirebaseHelper.uid!!)
+        setPlayerInGameStatus(InGameStatus.LEFT.ordinal, gameId, firestore.uid!!)
+        stopService(context)
+        navController.navigate(NavRoutes.StartGame.route)
     }
 
 

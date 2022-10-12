@@ -146,7 +146,7 @@ fun LobbyCreationScreen(
                             maxPlayers = maxPlayers!!,
                             timeLimit = timeLimit!!,
                             radius = radius!!,
-                            status = LobbyStatus.CREATED.value,
+                            status = LobbyStatus.CREATED.ordinal,
                             countdown = countdown!!
                         )
                         val gameId = vm.addLobby(lobby)
@@ -154,8 +154,8 @@ fun LobbyCreationScreen(
                             nickname = nickname,
                             avatarId = avatarId,
                             playerId = FirebaseHelper.uid!!,
-                            inLobbyStatus = InLobbyStatus.CREATOR.value,
-                            inGameStatus = InGameStatus.SEEKER.value
+                            inLobbyStatus = InLobbyStatus.CREATOR.ordinal,
+                            inGameStatus = InGameStatus.SEEKER.ordinal
                         )
                         vm.addPlayer(player, gameId)
                         vm.updateUser(
@@ -353,7 +353,7 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
             .addOnSuccessListener { data ->
                 val player = data.toObject(Player::class.java)
                 player?.let {
-                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.value)
+                    isCreator.postValue(it.inLobbyStatus == InLobbyStatus.CREATOR.ordinal)
                 }
             }
             .addOnFailureListener {

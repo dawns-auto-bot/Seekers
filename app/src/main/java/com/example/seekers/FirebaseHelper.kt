@@ -192,29 +192,30 @@ class News(
     val timestamp: Timestamp = Timestamp.now(),
 ) : Serializable
 
-enum class InLobbyStatus(val value: Int) {
-    CREATOR(0),
-    JOINED(1),
+enum class InLobbyStatus {
+    CREATOR,
+    JOINED,
 }
 
-enum class InGameStatus(val value: Int) {
-    SEEKER(0),
-    PLAYER(1),
-    MOVING(2),
-    ELIMINATED(3)
+enum class InGameStatus {
+    SEEKER,
+    PLAYER,
+    MOVING,
+    ELIMINATED,
+    LEFT
 }
 
-enum class PlayerDistance(val value: Int) {
-    NOT_IN_RADAR(0),
-    WITHIN10(1),
-    WITHIN50(2),
-    WITHIN100(3)
+enum class PlayerDistance {
+    NOT_IN_RADAR,
+    WITHIN10,
+    WITHIN50,
+    WITHIN100
 }
 
-enum class LobbyStatus(val value: Int) {
-    CREATED(0),
-    ACTIVE(1),
-    COUNTDOWN(2),
-    FINISHED(3),
-    DELETED(4),
+enum class LobbyStatus {
+    CREATED,
+    ACTIVE,
+    COUNTDOWN,
+    FINISHED,
+    DELETED,
 }

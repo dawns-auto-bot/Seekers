@@ -206,20 +206,20 @@ class RadarViewModel() : ViewModel() {
                     seekerConvertedToLocation.distanceTo(playerConvertedToLocation)
                 Log.d("location", "compare to: $distanceFromSeeker")
                 if (distanceFromSeeker <= 10) {
-                    player.distanceStatus = PlayerDistance.WITHIN10.value
+                    player.distanceStatus = PlayerDistance.WITHIN10.ordinal
                     playersWithDistance.add(Pair(player, distanceFromSeeker))
                 } else if (distanceFromSeeker > 10 && distanceFromSeeker <= 50) {
-                    player.distanceStatus = PlayerDistance.WITHIN50.value
+                    player.distanceStatus = PlayerDistance.WITHIN50.ordinal
                     playersWithDistance.add(Pair(player, distanceFromSeeker))
                 } else if (distanceFromSeeker > 50 && distanceFromSeeker <= 100) {
-                    player.distanceStatus = PlayerDistance.WITHIN100.value
+                    player.distanceStatus = PlayerDistance.WITHIN100.ordinal
                     playersWithDistance.add(Pair(player, distanceFromSeeker))
                 }
             }
 
             val playersFiltered =
                 playersWithDistance.filter {
-                    it.first.distanceStatus != PlayerDistance.NOT_IN_RADAR.value && it.first.playerId != FirebaseHelper.uid!!
+                    it.first.distanceStatus != PlayerDistance.NOT_IN_RADAR.ordinal && it.first.playerId != FirebaseHelper.uid!!
                 }
             players.postValue(playersFiltered.sortedBy { it.second })
         }

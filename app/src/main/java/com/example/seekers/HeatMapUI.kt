@@ -94,13 +94,13 @@ fun PlayerTile(player: Player) {
 @Composable
 fun StatusPill(inGameStatus: Int) {
     val status = when (inGameStatus) {
-        InGameStatus.SEEKER.value -> "seeker"
-        InGameStatus.PLAYER.value -> "hiding"
-        InGameStatus.MOVING.value -> "moving"
-        InGameStatus.ELIMINATED.value -> "eliminated"
+        InGameStatus.SEEKER.ordinal -> "seeker"
+        InGameStatus.PLAYER.ordinal -> "hiding"
+        InGameStatus.MOVING.ordinal -> "moving"
+        InGameStatus.ELIMINATED.ordinal -> "eliminated"
         else -> "unknown"
     }
-    val color = if (inGameStatus == InGameStatus.SEEKER.value) Color.Red else Color.LightGray
+    val color = if (inGameStatus == InGameStatus.SEEKER.ordinal) Color.Red else Color.LightGray
 
     Card(shape = RoundedCornerShape(16.dp), backgroundColor = color) {
         Text(

@@ -78,7 +78,7 @@ fun LobbyQRScreen(
     LaunchedEffect(lobby) {
         lobby?.let {
             when (it.status) {
-                LobbyStatus.DELETED.value -> {
+                LobbyStatus.DELETED.ordinal -> {
                     if (isCreator != true) {
                         Toast.makeText(context, "The lobby was closed by the host", Toast.LENGTH_LONG)
                             .show()
@@ -86,13 +86,13 @@ fun LobbyQRScreen(
                     vm.updateUser(FirebaseHelper.uid!!, mapOf(Pair("currentGameId", "")))
                     navController.navigate(NavRoutes.StartGame.route)
                 }
-                LobbyStatus.COUNTDOWN.value -> {
+                LobbyStatus.COUNTDOWN.ordinal -> {
                     scope.launch {
                         delay(1000)
                         navController.navigate(NavRoutes.Countdown.route + "/$gameId")
                     }
                 }
-                LobbyStatus.ACTIVE.value -> {
+                LobbyStatus.ACTIVE.ordinal -> {
                     navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
                 }
             }
@@ -167,7 +167,7 @@ fun LobbyQRScreen(
                         CustomButton(text = "Start Game") {
                             vm.updateLobby(
                                 mapOf(
-                                    Pair("status", LobbyStatus.COUNTDOWN.value),
+                                    Pair("status", LobbyStatus.COUNTDOWN.ordinal),
                                     Pair("startTime", FieldValue.serverTimestamp())
                                 ),
                                 gameId
@@ -204,7 +204,7 @@ fun LobbyQRScreen(
         if (showDismissDialog) {
             DismissLobbyDialog(onDismissRequest = { showDismissDialog = false }, onConfirm = {
                 val changeMap = mapOf(
-                    Pair("status", LobbyStatus.DELETED.value)
+                    Pair("status", LobbyStatus.DELETED.ordinal)
                 )
                 vm.updateUser(
                     FirebaseHelper.uid!!,
@@ -546,8 +546,8 @@ fun PlayerCard(
                         .padding(10.dp)
                 )
             }
-            Text(text = "${player.nickname} ${if (player.inLobbyStatus == InLobbyStatus.CREATOR.value) "(Host)" else ""}")
-            if (isKickable && player.inLobbyStatus == InLobbyStatus.JOINED.value) {
+            Text(text = "${player.nickname} ${if (player.inLobbyStatus == InLobbyStatus.CREATOR.ordinal) "(Host)" else ""}")
+            if (isKickable && player.inLobbyStatus == InLobbyStatus.JOINED.ordinal) {
                 Button(
                     onClick = {
                         vm.removePlayer(gameId = gameId, player.playerId)

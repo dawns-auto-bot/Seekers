@@ -127,7 +127,7 @@ class ForegroundService : Service() {
             previousLoc = curLoc
             if (!isSeeker) {
                 firestore.updatePlayerInGameStatus(
-                    InGameStatus.MOVING.value,
+                    InGameStatus.MOVING.ordinal,
                     gameId,
                     firestore.uid!!
                 )
@@ -135,7 +135,7 @@ class ForegroundService : Service() {
         } else {
             if (!isSeeker) {
                 firestore.updatePlayerInGameStatus(
-                    InGameStatus.PLAYER.value,
+                    InGameStatus.PLAYER.ordinal,
                     gameId,
                     firestore.uid!!
                 )
@@ -145,7 +145,7 @@ class ForegroundService : Service() {
 
     fun checkDistanceToSeekers(ownLocation: Location, gameId: String) {
         firestore.getPlayers(gameId)
-            .whereEqualTo("inGameStatus", InGameStatus.SEEKER.value)
+            .whereEqualTo("inGameStatus", InGameStatus.SEEKER.ordinal)
             .get()
             .addOnSuccessListener {
                 val seekers = it.toObjects(Player::class.java)
@@ -388,9 +388,9 @@ class ForegroundService : Service() {
         firestore.getPlayers(gameId = id).get()
             .addOnSuccessListener { data ->
                 val players = data.toObjects(Player::class.java)
-                val creator = players.find { it.inLobbyStatus == InLobbyStatus.CREATOR.value }
+                val creator = players.find { it.inLobbyStatus == InLobbyStatus.CREATOR.ordinal }
                 if (firestore.uid == creator?.playerId) {
-                    val changeMap = mapOf(Pair("status", LobbyStatus.FINISHED.value))
+                    val changeMap = mapOf(Pair("status", LobbyStatus.FINISHED.ordinal))
                     firestore.updateLobby(changeMap, gameId = id)
                 }
                 scope.launch {

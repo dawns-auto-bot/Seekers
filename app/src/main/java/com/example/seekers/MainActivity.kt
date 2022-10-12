@@ -285,13 +285,13 @@ fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavCont
         gameStatus?.let {
             gameId ?: return@LaunchedEffect
             when (it) {
-                LobbyStatus.CREATED.value -> {
+                LobbyStatus.CREATED.ordinal -> {
                     navController.navigate(NavRoutes.LobbyQR.route + "/$gameId")
                 }
-                LobbyStatus.COUNTDOWN.value -> {
+                LobbyStatus.COUNTDOWN.ordinal -> {
                     navController.navigate(NavRoutes.Countdown.route + "/$gameId")
                 }
-                LobbyStatus.ACTIVE.value -> {
+                LobbyStatus.ACTIVE.ordinal -> {
                     navController.navigate(NavRoutes.Heatmap.route + "/$gameId")
                 }
             }

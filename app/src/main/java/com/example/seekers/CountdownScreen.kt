@@ -69,7 +69,7 @@ fun CountdownScreen(
                     scope.launch {
                         delay(1500)
                         vm.updateLobby(
-                            mapOf(Pair("status", LobbyStatus.ACTIVE.value)),
+                            mapOf(Pair("status", LobbyStatus.ACTIVE.ordinal)),
                             gameId
                         )
                         mediaPlayerHidingPhaseMusic.stop()
