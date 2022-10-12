@@ -184,7 +184,7 @@ fun HeatMapScreen(
         lobbyStatus?.let {
             when (it) {
                 LobbyStatus.ACTIVE.value ->{
-                    
+
                 }
 
                 LobbyStatus.FINISHED.value -> {
