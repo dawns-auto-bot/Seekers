@@ -315,6 +315,7 @@ fun ShowRules(vm: LobbyCreationScreenViewModel) {
 
 @Composable
 fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
+
     val context = LocalContext.current
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()

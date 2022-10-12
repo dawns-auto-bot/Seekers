@@ -375,7 +375,15 @@ class LobbyCreationScreenViewModel(application: Application) : AndroidViewModel(
     fun getLobby(gameId: String) {
         firestore.getLobby(gameId).addSnapshotListener { data, e ->
             data?.let {
-                lobby.postValue(it.toObject(Lobby::class.java))
+                val lobbyFetched = it.toObject(Lobby::class.java)
+                if (lobbyFetched != null) {
+                    lobby.postValue(lobbyFetched)
+                    maxPlayers.postValue(lobbyFetched.maxPlayers)
+                    timeLimit.postValue(lobbyFetched.timeLimit)
+                    countdown.postValue(lobbyFetched.countdown)
+                    radius.postValue(lobbyFetched.radius)
+                    center.postValue(LatLng(lobbyFetched.center.latitude, lobbyFetched.center.longitude))
+                }
             }
         }
     }
