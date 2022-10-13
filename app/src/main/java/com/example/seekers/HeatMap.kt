@@ -23,7 +23,6 @@ fun HeatMap(
     movingPlayers: List<Player>,
     tileProvider: HeatmapTileProvider?,
     circleCoords: List<LatLng>,
-    eliminatedPlayers: List<Player>
 ) {
     val context = LocalContext.current
     GoogleMap(
@@ -39,7 +38,7 @@ fun HeatMap(
         }
 
         movingPlayers.forEach {
-            val res = avatarList[it.avatarId]
+            val res = avatarListWithBg[it.avatarId]
             val bitmap = BitmapFactory.decodeResource(context.resources, res)
             val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 50, 50, false)
             Marker(
@@ -51,24 +50,6 @@ fun HeatMap(
                 ),
                 icon = BitmapDescriptorFactory.fromBitmap(resizedBitmap),
                 title = it.nickname,
-                visible = true,
-                anchor = Offset(0.5f, 0.5f)
-            )
-        }
-        eliminatedPlayers.forEach {
-            val res = avatarList[it.avatarId]
-            val bitmap = BitmapFactory.decodeResource(context.resources, res)
-            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 50, 50, false)
-            val grayedBitmap = resizedBitmap.toGrayscale()
-            Marker(
-                state = MarkerState(
-                    position = LatLng(
-                        it.location.latitude,
-                        it.location.longitude
-                    )
-                ),
-                icon = BitmapDescriptorFactory.fromBitmap(grayedBitmap),
-                title = it.nickname + " (eliminated)",
                 visible = true,
                 anchor = Offset(0.5f, 0.5f)
             )

@@ -70,7 +70,7 @@ fun PlayerList(players: List<Player>) {
 @Composable
 fun PlayerTile(player: Player) {
     Column(Modifier.fillMaxWidth()) {
-        Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        Card(modifier = Modifier.fillMaxWidth().padding(16.dp), elevation = 4.dp) {
             Row(
                 Modifier
                     .fillMaxWidth()

@@ -313,10 +313,8 @@ fun MainScreen(vm: AuthenticationViewModel = viewModel(), navController: NavCont
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-
         modifier = Modifier.fillMaxHeight()
     ) {
-
         if (loggedInUser == null && !loading) {
             LoginForm(
                 model = vm,

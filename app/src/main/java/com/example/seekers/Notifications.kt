@@ -5,23 +5,25 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
+import com.example.seekers.ui.theme.Emerald
 import com.google.android.gms.location.Priority
 import java.util.*
 
 object Notifications {
-    private var id: Int = UUID.randomUUID().hashCode()
-    private val CHANNEL_ID = "LOCATION_SERVICE"
+    private val CHANNEL_ID = "FOREGROUND_SERVICE"
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun createNotificationChannel(
         context: Context,
         channelId: String = CHANNEL_ID,
         importanceLevel: Int = NotificationManager.IMPORTANCE_NONE,
-        lockscreenVisibility: Int = Notification.VISIBILITY_PRIVATE,
+        lockscreenVisibility: Int = Notification.VISIBILITY_PUBLIC,
     ) {
         val channel = NotificationChannel(
             channelId,
@@ -50,11 +52,16 @@ object Notifications {
         return builder
             .setContentTitle(title)
             .setContentText(content)
-            .setSmallIcon(R.drawable.map)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.chick_with_background))
             .setPriority(priority)
             .setCategory(category)
             .setContentIntent(pendingIntent)
             .setAutoCancel(autoCancel)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setColor(Emerald.toArgb())
+            .setColorized(true)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .build()
     }
 }

@@ -335,10 +335,8 @@ fun ShowRules(vm: LobbyCreationScreenViewModel) {
 fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
     val maxPlayers by vm.maxPlayers.observeAsState()
     val timeLimit by vm.timeLimit.observeAsState()
-    val radius by vm.radius.observeAsState()
     val countdown by vm.countdown.observeAsState()
     val showMap by vm.showMap.observeAsState(false)
-    var isLocationAllowed by remember { mutableStateOf(false) }
     var cameraState = rememberCameraPositionState()
 
     if (!showMap) {
@@ -370,36 +368,29 @@ fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
             }
         }
     } else {
-        if (isLocationAllowed) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Icon(imageVector = Icons.Filled.Cancel, contentDescription = "cancel",
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                        .clickable {
-                            vm.updateShowMap(false)
-                        }
-                )
-                AreaSelectionMap(
-                    vm = vm,
-                    properties = MapProperties(
-                        mapType = MapType.SATELLITE,
-                        isMyLocationEnabled = true
-                    ),
-                    settings = MapUiSettings(
-                        zoomControlsEnabled = true,
-                        zoomGesturesEnabled = true,
-                        rotationGesturesEnabled = false,
-                        scrollGesturesEnabled = true
-                    ),
-                    state = cameraState
-                )
-            }
-
-        } else {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "Please allow location to set a playing area")
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Icon(imageVector = Icons.Filled.Cancel, contentDescription = "cancel",
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+                    .clickable {
+                        vm.updateShowMap(false)
+                    }
+            )
+            AreaSelectionMap(
+                vm = vm,
+                properties = MapProperties(
+                    mapType = MapType.SATELLITE,
+                    isMyLocationEnabled = true,
+                ),
+                settings = MapUiSettings(
+                    zoomControlsEnabled = true,
+                    zoomGesturesEnabled = true,
+                    rotationGesturesEnabled = false,
+                    scrollGesturesEnabled = true
+                ),
+                state = cameraState
+            )
         }
     }
 

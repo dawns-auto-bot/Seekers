@@ -1,9 +1,11 @@
 package com.example.seekers
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.CountDownTimer
@@ -49,7 +51,6 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
 import com.google.maps.android.compose.MapProperties
@@ -61,7 +62,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.math.*
 
 @OptIn(ExperimentalMaterialApi::class)
 @SuppressLint("MissingPermission")
@@ -81,7 +81,7 @@ fun HeatMapScreen(
     val lobby by vm.lobby.observeAsState()
     val lobbyStatus by vm.lobbyStatus.observeAsState()
     var timer: CountDownTimer? by remember { mutableStateOf(null) }
-    val timeRemaining by vm.timeRemaining.observeAsState()
+//    val timeRemaining by vm.timeRemaining.observeAsState()
     val center by vm.center.observeAsState()
     val isSeeker by vm.isSeeker.observeAsState()
     val playerStatus by vm.playerStatus.observeAsState()
@@ -145,10 +145,11 @@ fun HeatMapScreen(
     }
     LaunchedEffect(Unit) {
         permissionVM.checkAllPermissions(context)
+        vm.receiveCountdown(context)
         launch(Dispatchers.IO) {
             vm.getPlayers(gameId)
             vm.getLobby(gameId)
-            vm.getTime(gameId)
+//            vm.getTime(gameId)
             vm.getNews(gameId)
         }
 //        vm.addMockPlayers(gameId)
@@ -197,22 +198,22 @@ fun HeatMapScreen(
         }
     }
 
-    LaunchedEffect(timeRemaining) {
-        timeRemaining?.let {
-            vm.updateCountdown(it)
-            timer = object : CountDownTimer(it * 1000L, 1000) {
-                override fun onTick(p0: Long) {
-                    if (p0 == 0L) {
-                        vm.updateCountdown(0)
-                        return
-                    }
-                    vm.updateCountdown(p0.div(1000).toInt())
-                }
-
-                override fun onFinish() {}
-            }
-        }
-    }
+//    LaunchedEffect(timeRemaining) {
+//        timeRemaining?.let {
+//            vm.updateCountdown(it)
+//            timer = object : CountDownTimer(it * 1000L, 1000) {
+//                override fun onTick(p0: Long) {
+//                    if (p0 == 0L) {
+//                        vm.updateCountdown(0)
+//                        return
+//                    }
+//                    vm.updateCountdown(p0.div(1000).toInt())
+//                }
+//
+//                override fun onFinish() {}
+//            }
+//        }
+//    }
 
 //    LaunchedEffect(eliminatedPlayers) {
 //        eliminatedPlayers.find { it.playerId == FirebaseHelper.uid!! }?.let {
@@ -419,7 +420,6 @@ fun HeatMapScreen(
                                 properties = props,
                                 uiSettings = uiSettings,
                                 movingPlayers = movingPlayers,
-                                eliminatedPlayers = eliminatedPlayers,
                                 tileProvider = tileProvider,
                                 circleCoords = circleCoords
                             )
@@ -463,14 +463,8 @@ fun HeatMapScreen(
                                         }
                                     }
 
-
-                                    timer?.let {
-                                        Box(modifier = Modifier.align(Alignment.Center)) {
-                                            GameTimer(vm = vm)
-                                            LaunchedEffect(Unit) {
-                                                it.start()
-                                            }
-                                        }
+                                    Box(modifier = Modifier.align(Alignment.Center)) {
+                                        GameTimer(vm = vm)
                                     }
 
                                     Box(modifier = Modifier.align(Alignment.CenterEnd)) {
@@ -814,7 +808,7 @@ fun GameTimer(vm: HeatMapViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(Icons.Default.Alarm, contentDescription = "", tint = Raisin)
-            Box(modifier = Modifier.width(90.dp)) {
+            Box(modifier = Modifier.width(90.dp), contentAlignment = Alignment.Center) {
                 Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
             }
         }
@@ -846,7 +840,8 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     val center = Transformations.map(lobby) {
         LatLng(it.center.latitude, it.center.longitude)
     }
-    val timeRemaining = MutableLiveData<Int>()
+
+    //    val timeRemaining = MutableLiveData<Int>()
     val players = MutableLiveData<List<Player>>()
     val playerStatus = Transformations.map(players) { list ->
         list.find { it.playerId == firestore.uid!! }?.inGameStatus
@@ -865,8 +860,8 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     val eliminatedPlayers = Transformations.map(playersWithoutSelf) { players ->
         players.filter { it.inGameStatus == InGameStatus.ELIMINATED.ordinal }
     }
-
     val countdown = MutableLiveData<Int>()
+    var countdownReceiver: BroadcastReceiver? = null
 
     fun addMockPlayers(gameId: String) {
         val mockPlayers = listOf(
@@ -972,20 +967,20 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         isSeeker.value = newVal
     }
 
-    fun getTime(gameId: String) {
-        val now = Timestamp.now().toDate().time.div(1000)
-        firestore.getLobby(gameId = gameId).get()
-            .addOnSuccessListener {
-                val lobby = it.toObject(Lobby::class.java)
-                lobby?.let {
-                    val startTime = lobby.startTime.toDate().time / 1000
-                    val countdown = lobby.countdown
-                    val timeLimit = lobby.timeLimit * 60
-                    val gameEndTime = (startTime + countdown + timeLimit)
-                    timeRemaining.postValue(gameEndTime.minus(now).toInt() + 1)
-                }
-            }
-    }
+//    fun getTime(gameId: String) {
+//        val now = Timestamp.now().toDate().time.div(1000)
+//        firestore.getLobby(gameId = gameId).get()
+//            .addOnSuccessListener {
+//                val lobby = it.toObject(Lobby::class.java)
+//                lobby?.let {
+//                    val startTime = lobby.startTime.toDate().time / 1000
+//                    val countdown = lobby.countdown
+//                    val timeLimit = lobby.timeLimit * 60
+//                    val gameEndTime = (startTime + countdown + timeLimit)
+//                    timeRemaining.postValue(gameEndTime.minus(now).toInt() + 1)
+//                }
+//            }
+//    }
 
     fun updateCountdown(newVal: Int) {
         countdown.value = newVal
@@ -1028,7 +1023,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     fun getNews(gameId: String) {
         firestore.getNews(gameId).addSnapshotListener { data, e ->
             data ?: kotlin.run {
-                Log.e(ForegroundService.TAG, "listenForNews: ", e)
+                Log.e(GameService.TAG, "listenForNews: ", e)
                 return@addSnapshotListener
             }
             val newsList = data.toObjects(News::class.java)
@@ -1046,6 +1041,22 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         navController.navigate(NavRoutes.StartGame.route)
     }
 
+    fun receiveCountdown(context: Context) {
+        val countdownFilter = IntentFilter()
+        countdownFilter.addAction(GameService.COUNTDOWN_TICK)
+        countdownReceiver = object : BroadcastReceiver() {
+            override fun onReceive(p0: Context?, p1: Intent?) {
+                val countdown = p1?.getIntExtra(GameService.TIME_LEFT, 0)!!
+                updateCountdown(countdown)
+            }
+        }
+        context.registerReceiver(countdownReceiver, countdownFilter)
+        println("registered")
+    }
+
+    private fun unregisterReceiver(context: Context) {
+        context.unregisterReceiver(countdownReceiver)
+    }
 
 //    private var fusedLocationClient = LocationServices.getFusedLocationProviderClient(application)
 //    private lateinit var locationCallback2: LocationCallback
@@ -1077,7 +1088,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
 //    }
 
     fun startService(context: Context, gameId: String, isSeeker: Boolean) {
-        ForegroundService.start(
+        GameService.start(
             context = context,
             gameId = gameId,
             isSeeker = isSeeker
@@ -1085,9 +1096,10 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun stopService(context: Context) {
-        ForegroundService.stop(
+        GameService.stop(
             context = context,
         )
+        unregisterReceiver(context)
     }
 
 }

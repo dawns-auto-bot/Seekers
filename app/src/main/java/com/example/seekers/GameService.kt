@@ -18,13 +18,12 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class ForegroundService : Service() {
+class GameService : Service() {
     companion object {
         const val TAG = "LOCATION_SERVICE"
         const val SEEKER_NOTIFICATION = "SEEKER_NOTIFICATION"
@@ -34,20 +33,21 @@ class ForegroundService : Service() {
         const val SEEKER_NOTIFICATION_ID = 2
         const val BOUNDS_NOTIFICATION_ID = 3
         const val FOUND_NOTIFICATION_ID = 4
+        const val TIME_LEFT = "TIME_LEFT"
+        const val COUNTDOWN_TICK = "COUNTDOWN_TICK"
 
         fun start(context: Context, gameId: String, isSeeker: Boolean) {
-            val startIntent = Intent(context, ForegroundService::class.java)
+            val startIntent = Intent(context, GameService::class.java)
             startIntent.putExtra("gameId", gameId)
             startIntent.putExtra("isSeeker", isSeeker)
             ContextCompat.startForegroundService(context, startIntent)
         }
         fun stop(context: Context) {
-            val stopIntent = Intent(context, ForegroundService::class.java)
+            val stopIntent = Intent(context, GameService::class.java)
             context.stopService(stopIntent)
         }
     }
     private val firestore = FirebaseHelper
-    var listenerReg: ListenerRegistration? = null
     var previousLoc: Location? = null
     var callback: LocationCallback? = null
     var isTracking = false
@@ -112,7 +112,7 @@ class ForegroundService : Service() {
             return
         }
         val distanceToPrev = prevLoc.distanceTo(curLoc)
-        if (distanceToPrev > 10f) {
+        if (distanceToPrev > 5f) {
             Log.d(TAG, "updateLoc: sent location")
             firestore.updatePlayer(
                 mapOf(
@@ -190,30 +190,6 @@ class ForegroundService : Service() {
                 }
             }
     }
-
-//    fun listenToLobbyStatus(gameId: String, isSeeker: Boolean) {
-//        Log.d(TAG, "listenToLobbyStatus")
-//        listenerReg = firestore.getLobby(gameId)
-//            .addSnapshotListener { data, e ->
-//                data ?: kotlin.run {
-//                    Log.e(TAG, "listenToStatus: ", e)
-//                    return@addSnapshotListener
-//                }
-//                val lobby = data.toObject(Lobby::class.java)
-//                lobby?.let {
-//                    when (it.status) {
-//                        LobbyStatus.ACTIVE.value -> {
-//                            Log.d(TAG, "listenToLobbyStatus: Lobby active")
-//                            startTracking(gameId, isSeeker)
-//                        }
-//                        LobbyStatus.FINISHED.value -> {
-//                            Log.d(TAG, "listenToLobbyStatus: Lobby stopped")
-//                            stopTracking(gameId, isSeeker)
-//                        }
-//                    }
-//                }
-//            }
-//    }
 
     private fun startTracking(gameId: String, isSeeker: Boolean) {
         Log.d(TAG, "startTracking")
@@ -338,7 +314,7 @@ class ForegroundService : Service() {
             context = applicationContext,
             title = "Seekers - Game in progress",
             content = timeText,
-            pendingIntent = getPendingIntent()
+            pendingIntent = getPendingIntent(),
         )
     }
 
@@ -362,15 +338,28 @@ class ForegroundService : Service() {
         timer = object: CountDownTimer(timeLeft * 1000L, 1000) {
             override fun onTick(p0: Long) {
                 if (p0 == 0L) {
+                    updateMainNotification(0)
+                    broadcastCountdown(0)
+                    this.cancel()
                     return
                 }
-                updateMainNotification(p0.div(1000).toInt())
+                val seconds = p0.div(1000).toInt()
+                updateMainNotification(seconds)
+                broadcastCountdown(seconds)
             }
             override fun onFinish() {
+                this.cancel()
                 endGame()
             }
         }
         timer?.start()
+    }
+
+    fun broadcastCountdown(seconds: Int) {
+        val countDownIntent = Intent()
+        countDownIntent.action = COUNTDOWN_TICK
+        countDownIntent.putExtra(TIME_LEFT, seconds)
+        sendBroadcast(countDownIntent)
     }
 
     private fun stopTimer() {

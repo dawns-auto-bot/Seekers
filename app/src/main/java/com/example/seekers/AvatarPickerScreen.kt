@@ -129,6 +129,23 @@ var avatarList = listOf(
     R.drawable.avatar_empty
 )
 
+var avatarListWithBg = listOf(
+    R.drawable.bee_with_background,
+    R.drawable.chameleon_with_background,
+    R.drawable.chick_with_background,
+    R.drawable.cow_with_background,
+    R.drawable.crab_with_background,
+    R.drawable.dog_with_background,
+    R.drawable.elephant_with_background,
+    R.drawable.fox_with_background,
+    R.drawable.koala_with_background,
+    R.drawable.lion_with_background,
+    R.drawable.penguin_with_background,
+    R.drawable.whale_with_background,
+    R.drawable.avatar_empty
+)
+
+
 @Composable
 fun BottomSheet(onPick: (Int) -> Unit) {
     Column(
