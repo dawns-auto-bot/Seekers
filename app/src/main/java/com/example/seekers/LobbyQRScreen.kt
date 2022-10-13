@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +39,8 @@ import com.example.seekers.general.CustomButton
 import com.example.seekers.general.IconButton
 import com.example.seekers.general.QRCodeComponent
 import com.example.seekers.general.generateQRCode
+import com.example.seekers.ui.theme.Powder
+import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.ui.theme.SizzlingRed
 import com.example.seekers.ui.theme.avatarBackground
 import com.google.firebase.firestore.FieldValue
@@ -144,12 +147,12 @@ fun LobbyQRScreen(
             backgroundColor = Color.Transparent,
             elevation = 0.dp
         )
-    }
+    }, backgroundColor = Powder
     ) {
         Column(
-            Modifier.padding(it),
+            Modifier.padding(it).background(Powder),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(text = "Participants", fontSize = 20.sp, modifier = Modifier.padding(15.dp))
             Participants(
@@ -256,7 +259,7 @@ fun EditRulesDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "${if (isCreator) "Edit" else "Check"} Rules")
+                        Text(text = "${if (isCreator) "EDIT" else "CHECK"} RULES")
                         Icon(
                             imageVector = Icons.Filled.Cancel,
                             contentDescription = "close dialog",
@@ -344,7 +347,7 @@ fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
                 keyboardType = KeyboardType.Number,
                 onChangeValue = { vm.updateCountdown(it.toIntOrNull()) })
 
-            IconButton(
+            /* IconButton(
                 resourceId = R.drawable.map,
                 buttonText = "Define Area",
                 buttonColor = if (showMap) Color(0xFF838383) else Color.LightGray,
@@ -354,6 +357,47 @@ fun EditRulesForm(vm: LobbyCreationScreenViewModel) {
                     vm.updateShowMap(true)
                 } else {
                     showPermissionsDialog = true
+                }
+            }*/
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+
+                    .height(100.dp)
+                    .clickable {
+                        if (LocationHelper.checkPermissions(context)) {
+                            isLocationAllowed = true
+                            vm.updateShowMap(true)
+                        } else {
+                            showPermissionsDialog = true
+                        }
+                    },
+                elevation = 10.dp
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    Image(
+                        painter = painterResource(R.drawable.map),
+                        contentDescription = "map",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        alignment = Alignment.CenterEnd
+                    )
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(16.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Text(text = "EDIT PLAY AREA", fontSize = 22.sp)
+                            Box(
+                                modifier = Modifier
+                                    .width(80.dp)
+                                    .height(1.dp)
+                                    .background(color = Raisin)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -518,7 +562,7 @@ fun PlayerCard(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth().padding(6.dp),
         elevation = 10.dp
     ) {
         Row(
@@ -553,7 +597,7 @@ fun PlayerCard(
                         vm.removePlayer(gameId = gameId, player.playerId)
                     },
                     colors = ButtonDefaults.buttonColors(
-                        backgroundColor = Color.Red,
+                        backgroundColor = SizzlingRed,
                         contentColor = Color.White
                     ),
                     modifier = Modifier

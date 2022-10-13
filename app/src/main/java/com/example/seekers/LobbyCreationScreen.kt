@@ -7,6 +7,8 @@ import com.example.seekers.general.IconButton
 import android.app.Application
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,10 +20,14 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -39,6 +45,7 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
+import java.util.*
 
 @Composable
 fun LobbyCreationScreen(
@@ -66,6 +73,7 @@ fun LobbyCreationScreen(
             isLocationAllowed = it
         }
     )
+    val screenHeight = LocalConfiguration.current.screenHeightDp * 0.3
 
     LaunchedEffect(dialogShown) {
         if (dialogShown) {
@@ -102,25 +110,64 @@ fun LobbyCreationScreen(
                     .fillMaxWidth()
                     .weight(3f), contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = stringResource(id = R.string.lobby_creation),
-                    style = MaterialTheme.typography.h6
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = stringResource(id = R.string.lobby_creation).uppercase(Locale.ROOT),
+                        fontSize = 32.sp
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .height(1.dp)
+                            .background(color = Raisin)
+                    )
+                }
+
             }
 
             Column(Modifier.fillMaxWidth()) {
                 CreationForm(vm = vm)
                 Spacer(modifier = Modifier.height(16.dp))
-                IconButton(
-                    resourceId = R.drawable.map,
-                    buttonText = "Define Area",
-                    buttonColor = Emerald,
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+
+                        .height(100.dp)
+                        .clickable {
+                            if (LocationHelper.checkPermissions(context)) {
+                                isLocationAllowed = true
+                                vm.updateShowMap(true)
+                            } else {
+                                showPermissionsDialog = true
+                            }
+                        },
+                    elevation = 10.dp
                 ) {
-                    if (LocationHelper.checkPermissions(context)) {
-                        isLocationAllowed = true
-                        vm.updateShowMap(true)
-                    } else {
-                        showPermissionsDialog = true
+                    Box(Modifier.fillMaxSize()) {
+                        Image(
+                            painter = painterResource(R.drawable.map),
+                            contentDescription = "map",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            alignment = Alignment.CenterEnd
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(16.dp)
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                Text(text = "DEFINE PLAY AREA", fontSize = 22.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .width(80.dp)
+                                        .height(1.dp)
+                                        .background(color = Raisin)
+                                )
+                            }
+                        }
                     }
                 }
             }

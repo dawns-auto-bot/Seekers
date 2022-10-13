@@ -71,7 +71,7 @@ import kotlin.math.*
 
 @OptIn(ExperimentalMaterialApi::class)
 @RequiresApi(Build.VERSION_CODES.Q)
-@SuppressLint("MissingPermission")
+@SuppressLint("MissingPermission", "UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun HeatMapScreen(
     vm: HeatMapViewModel = viewModel(),
@@ -472,7 +472,7 @@ fun HeatMapScreen(
                                             contentDescription = "",
                                             tint = Raisin
                                         )
-                                        Text(text = "3/8", color = Raisin, fontSize = 20.sp)
+                                        PlayerCount(vm = vm)
                                     }
 
                                     timer?.let {
@@ -610,13 +610,20 @@ fun QRButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
 @Composable
 fun NewsButton(modifier: Modifier = Modifier, onClick: () -> Unit, hasNew: Boolean) {
     Box {
-        Card(shape = CircleShape, elevation = 4.dp, modifier = modifier.clickable { onClick() }) {
-            Icon(
-                imageVector = Icons.Filled.Notifications,
-                contentDescription = "qr",
-                modifier = Modifier.padding(8.dp)
-            )
-        }
+        IconButton(
+            onClick = { onClick() },
+            content = {
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Notifications,
+                        contentDescription = "news",
+                        tint = Raisin
+                    )
+                }
+            })
         if (hasNew) {
             Surface(
                 color = Color.Red, shape = CircleShape, modifier = Modifier
@@ -828,11 +835,23 @@ fun QRScannerDialog(onDismiss: () -> Unit, onScanned: (String) -> Unit) {
 fun GameTimer(vm: HeatMapViewModel) {
     val countdown by vm.countdown.observeAsState()
     countdown?.let {
-        Row(modifier = Modifier.border(BorderStroke(1.dp, Raisin)).padding(2.dp)) {
+        Row(modifier = Modifier
+            .border(BorderStroke(1.dp, Raisin))
+            .padding(2.dp)) {
             Icon(Icons.Default.Alarm, contentDescription = "", tint = Raisin)
             Text(text = secondsToText(it), color = Raisin, fontSize = 20.sp)
         }
 
+    }
+}
+
+@Composable
+fun PlayerCount(vm: HeatMapViewModel) {
+    val players by vm.players.observeAsState()
+    val eliminated by vm.eliminatedPlayers.observeAsState()
+
+    players?.let {
+        Text(text = "${it.count() - (eliminated?.count() ?: 0)}/${it.count()}", color = Raisin, fontSize = 20.sp)
     }
 }
 

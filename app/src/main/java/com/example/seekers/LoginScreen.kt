@@ -60,6 +60,8 @@ fun LoginForm(
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val width = LocalConfiguration.current.screenWidthDp * 0.8
+    val height = LocalConfiguration.current.screenHeightDp
+
 
     Column(
         verticalArrangement = Arrangement.SpaceEvenly,
@@ -68,95 +70,99 @@ fun LoginForm(
             .padding(30.dp).fillMaxHeight(),
     ) {
         Image(
-                painter = painterResource(R.drawable.seekers_ver2),
+                painter = painterResource(R.drawable.seekers_ver3),
                 contentDescription = "seekers",
-                modifier = Modifier.size(120.dp)
+                modifier = Modifier.height((height * 0.2).dp)
             )
 
-        Text(text = "Welcome back!", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-        Text(text = "Sign in to continue", fontSize = 16.sp, color = Raisin)
+        Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Welcome back!", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Sign in to continue", fontSize = 16.sp, color = Raisin)
+        }
+
         // Spacer(modifier = Modifier.height(40.dp))
         if(invalidCredentials) {
             Text(text = "Invalid email or password", color = Color.Red)
         }
-        CustomOutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            focusManager = focusManager,
-            label = "Email",
-            placeholder = "Email",
-            keyboardType = KeyboardType.Email,
-            modifier = Modifier.width(width.dp)
-        )
-        // Spacer(modifier = Modifier.height(10.dp))
-        CustomOutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            focusManager = focusManager,
-            label = "Password",
-            placeholder = "Password",
-            trailingIcon = {
-                val image = if (passwordVisible) {
-                    Icons.Filled.Visibility
-                } else {
-                    Icons.Filled.VisibilityOff
-                }
-                val description = if (passwordVisible) "Hide password" else "Show password"
-
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(imageVector = image, description)
-                }
-            },
-            keyboardType = KeyboardType.Password,
-            passwordVisible = passwordVisible,
-            modifier = Modifier.width(width.dp)
-        )
-        // Spacer(modifier = Modifier.height(20.dp))
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            CustomButton(
-                onClick = {
-                    if (email.text == "" || password.text == "") {
-                        Toast.makeText(
-                            context,
-                            "Please give an email and password!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        model.fireBaseAuth.signInWithEmailAndPassword(
-                            email.text,
-                            password.text
-                        )
-                            .addOnCompleteListener() {
-                                if (it.isSuccessful) {
-                                    model.setUser(model.fireBaseAuth.currentUser)
-                                    println("logged in as: ${model.fireBaseAuth.currentUser}")
-                                    invalidCredentials = false
-                                    navController.navigate(NavRoutes.StartGame.route)
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "login failed!",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-
-                            }
-                            .addOnFailureListener {
-                                invalidCredentials = true
-//                                Log.e("login fail", "LoginForm: ", it)
-                            }
-                    }
-                }, text = "Login"
+        Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            CustomOutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                focusManager = focusManager,
+                label = "Email",
+                placeholder = "Email",
+                keyboardType = KeyboardType.Email,
+                modifier = Modifier.width(width.dp)
             )
+            // Spacer(modifier = Modifier.height(10.dp))
+            CustomOutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                focusManager = focusManager,
+                label = "Password",
+                placeholder = "Password",
+                trailingIcon = {
+                    val image = if (passwordVisible) {
+                        Icons.Filled.Visibility
+                    } else {
+                        Icons.Filled.VisibilityOff
+                    }
+                    val description = if (passwordVisible) "Hide password" else "Show password"
+
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, description)
+                    }
+                },
+                keyboardType = KeyboardType.Password,
+                passwordVisible = passwordVisible,
+                modifier = Modifier.width(width.dp)
+            )
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            ) {
+                CustomButton(
+                    onClick = {
+                        if (email.text == "" || password.text == "") {
+                            Toast.makeText(
+                                context,
+                                "Please give an email and password!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            model.fireBaseAuth.signInWithEmailAndPassword(
+                                email.text,
+                                password.text
+                            )
+                                .addOnCompleteListener() {
+                                    if (it.isSuccessful) {
+                                        model.setUser(model.fireBaseAuth.currentUser)
+                                        println("logged in as: ${model.fireBaseAuth.currentUser}")
+                                        invalidCredentials = false
+                                        navController.navigate(NavRoutes.StartGame.route)
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "login failed!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+
+                                }
+                                .addOnFailureListener {
+                                    invalidCredentials = true
+//                                Log.e("login fail", "LoginForm: ", it)
+                                }
+                        }
+                    }, text = "Login"
+                )
+            }
         }
-        // Spacer(modifier = Modifier.height(20.dp))
+
         Text(text = "Or", fontSize = 16.sp, color = Raisin)
-        // Spacer(modifier = Modifier.height(20.dp))
+
         GoogleButton(token = token, context = context, launcher = launcher)
-        // Spacer(modifier = Modifier.height(20.dp))
+
         Row() {
             Text(text = "Don't have an account?", fontSize = 12.sp, color = Raisin)
             Text(

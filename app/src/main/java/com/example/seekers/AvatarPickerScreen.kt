@@ -71,7 +71,13 @@ fun AvatarPickerScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = "Choose your profile")
+            Text(text = "PLAYER CREATION", fontSize = 26.sp)
+            Box(
+                modifier = Modifier
+                    .width(140.dp)
+                    .height(1.dp)
+                    .background(color = Raisin)
+            )
             Spacer(modifier = Modifier.height(32.dp))
             Card(
                 shape = CircleShape,
@@ -135,7 +141,7 @@ fun BottomSheet(onPick: (Int) -> Unit) {
         modifier = Modifier.padding(vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Choose avatar", fontSize = 30.sp)
+        Text(text = "CHOOSE AVATAR", fontSize = 30.sp)
         Spacer(modifier = Modifier.height(32.dp))
         LazyRow(modifier = Modifier.fillMaxWidth()) {
             items(avatarList) { avatar ->

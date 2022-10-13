@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.seekers.general.AvatarIcon
+import com.example.seekers.ui.theme.Powder
+import com.example.seekers.ui.theme.SizzlingRed
+import java.util.*
 
 @Composable
 fun PlayerListButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -45,11 +48,11 @@ fun PlayerListDialog(onDismiss: () -> Unit, players: List<Player>) {
                 .fillMaxWidth()
                 .height(height.dp)
                 .padding(32.dp),
-            backgroundColor = Color.White,
+            backgroundColor = Powder,
             shape = RoundedCornerShape(8.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 32.dp)) {
-                Text(text = "Player list")
+                Text(text = "PLAYERS", fontSize = 22.sp)
                 Spacer(modifier = Modifier.height(32.dp))
                 PlayerList(players = players)
             }
@@ -78,7 +81,7 @@ fun PlayerTile(player: Player) {
             ) {
                 AvatarIcon(
                     resourceId = avatarList[player.avatarId], imgModifier = Modifier
-                        .size(35.dp)
+                        .size(50.dp)
                         .padding(8.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -100,12 +103,12 @@ fun StatusPill(inGameStatus: Int) {
         InGameStatus.ELIMINATED.value -> "eliminated"
         else -> "unknown"
     }
-    val color = if (inGameStatus == InGameStatus.SEEKER.value) Color.Red else Color.LightGray
+    val color = if (inGameStatus == InGameStatus.SEEKER.value) SizzlingRed else Color.LightGray
 
     Card(shape = RoundedCornerShape(16.dp), backgroundColor = color) {
         Text(
-            text = status,
-            fontSize = 10.sp,
+            text = status.uppercase(Locale.ROOT),
+            fontSize = 16.sp,
             modifier = Modifier
                 .padding(horizontal = 8.dp)
                 .padding(vertical = 4.dp),

@@ -10,6 +10,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -55,8 +57,11 @@ import com.example.seekers.ui.theme.Powder
 import com.example.seekers.ui.theme.Raisin
 import com.example.seekers.general.getPermissionLauncher
 import com.example.seekers.general.isPermissionGranted
+import com.example.seekers.ui.theme.Emerald
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import com.google.accompanist.pager.ExperimentalPagerApi
+import com.google.accompanist.pager.*
 
 @Composable
 fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = viewModel()) {
@@ -64,6 +69,7 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
     var showPermissionDialog by remember { mutableStateOf(false) }
     var showLogOutDialog by remember { mutableStateOf(false) }
     val screenHeight = LocalConfiguration.current.screenHeightDp * 0.3
+    var showTutorial by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         vm.checkAllPermissions(context)
@@ -151,11 +157,40 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
                             }
                         }
                     }
-
-                    /*
-                    CustomButton(text = "Join lobby") {
-                        navController.navigate(NavRoutes.AvatarPicker.route + "/false")
-                    } */
+                }
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height((screenHeight*0.5).dp)
+                        .padding(horizontal = 15.dp, vertical = 5.dp)
+                        .clickable { showTutorial = true },
+                    elevation = 10.dp
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Image(
+                            painter = painterResource(R.drawable.tutorial_icon),
+                            contentDescription = "tutorial",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            alignment = Alignment.CenterEnd
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(16.dp)
+                        ) {
+                            Column {
+                                Text(text = "QUICK-START\nGUIDE", fontSize = 22.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .width(80.dp)
+                                        .height(1.dp)
+                                        .background(color = Raisin)
+                                )
+                            }
+                        }
+                    }
                 }
 
             }
@@ -178,6 +213,11 @@ fun StartGameScreen(navController: NavController, vm: PermissionsViewModel = vie
         }
         if (showPermissionDialog) {
             PermissionsDialog(onDismiss = { showPermissionDialog = false }, vm = vm)
+        }
+        if (showTutorial) {
+            TutorialDialog() {
+                showTutorial = false
+            }
         }
     }
     if (showLogOutDialog) {
@@ -209,6 +249,121 @@ fun LogOutDialog(onDismissRequest: () -> Unit, onConfirm: () -> Unit) {
             }
         }
     )
+}
+
+@OptIn(ExperimentalPagerApi::class, ExperimentalComposeUiApi::class)
+@Composable
+fun TutorialDialog(onDismiss: () -> Unit) {
+    val screenHeight = LocalConfiguration.current.screenHeightDp * .9
+    val screenWidth = LocalConfiguration.current.screenWidthDp * .9
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier
+                .padding(5.dp)
+                .background(Powder)
+                .fillMaxSize()) {
+            val pagerState = rememberPagerState()
+
+            // Display 10 items
+            HorizontalPager(
+                count = 5,
+                state = pagerState,
+                // Add 32.dp horizontal padding to 'center' the pages
+                contentPadding = PaddingValues(horizontal = 32.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            ) { page ->
+                PagerSampleItem(
+                    page = page,
+                    modifier = Modifier
+                        .fillMaxSize(),
+                )
+            }
+
+            HorizontalPagerIndicator(
+                pagerState = pagerState,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(16.dp),
+            )
+
+
+        }
+    }
+
+}
+
+
+@Composable
+internal fun PagerSampleItem(
+    page: Int,
+    modifier: Modifier = Modifier,
+) {
+    if(page == 0) {
+        Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Create a lobby to host your own game as the Seeker, and share the QR code for all your friends!", modifier = Modifier.padding(5.dp))
+            Image(
+                painter = painterResource(id = R.drawable.tutorial1),
+                contentDescription = "tutorial",
+                alignment = Alignment.Center
+            )
+            Text(text = "Or join a lobby of a friend with a QR code and get ready to hide!", modifier = Modifier.padding(5.dp))
+
+        }
+    } else if(page == 1) {
+        Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Remember to pick a funny nickname so your friends can recognize you!", modifier = Modifier.padding(5.dp))
+            Image(
+                painter = painterResource(id = R.drawable.tutorial2_1),
+                contentDescription = "tutorial",
+                alignment = Alignment.Center
+            )
+            Text(text = "And most importantly, a cute avatar", modifier = Modifier.padding(5.dp))
+            Image(
+                painter = painterResource(id = R.drawable.tutorial2_2),
+                contentDescription = "tutorial",
+                alignment = Alignment.Center
+            )
+        }
+    } else if(page == 2) {
+        Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Set the rules for your game", modifier = Modifier.padding(5.dp))
+            Image(
+                painter = painterResource(id = R.drawable.tutorial3),
+                contentDescription = "tutorial",
+                alignment = Alignment.Center
+            )
+            Text(text = "And don't forget to define the play area before creating the lobby!", modifier = Modifier.padding(5.dp))
+
+        }
+    } else if(page == 3) {
+        Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Setting the play area is simple", modifier = Modifier.padding(5.dp))
+            Image(
+                painter = painterResource(id = R.drawable.tutorial4),
+                contentDescription = "tutorial",
+                alignment = Alignment.Center
+            )
+            Text(text = "Just move the camera to a favorable position, set the radius with the vertical slider and you're good to go!", modifier = Modifier.padding(5.dp))
+        }
+    } else if(page == 4) {
+        Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "While waiting for your friends, open up the QR code for them to scan from your phone", modifier = Modifier.padding(5.dp))
+            Image(
+                painter = painterResource(id = R.drawable.tutorial5_1),
+                contentDescription = "tutorial",
+                alignment = Alignment.Center
+            )
+            Text(text = "In case you want to change the rules, here's the option to do that!", modifier = Modifier.padding(5.dp))
+            Image(
+                painter = painterResource(id = R.drawable.tutorial5_3),
+                contentDescription = "tutorial",
+                alignment = Alignment.Center
+            )
+            Text(text = "Now start the game and off you go, hide quickly!", modifier = Modifier.padding(5.dp))
+        }
+    }
 }
 
 class PermissionsViewModel : ViewModel() {
