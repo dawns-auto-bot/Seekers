@@ -1117,7 +1117,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
     private var distance = 0.0F
     private var running  = false
     private val stepLength = 0.78F
-    //private val context = application
+    private val context = application
     private var initialSteps = -1
     private val sensorManager: SensorManager = application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     val stepCounterSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
@@ -1164,7 +1164,7 @@ class HeatMapViewModel(application: Application) : AndroidViewModel(application)
         val value = sharedPreference.getInt("step count", 0)
         Log.d("steps from shared preferences", value.toString())
 
-        //Toast.makeText(context, value.toString(), Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "steps taken: $value", Toast.LENGTH_LONG).show()
         initialSteps = -1
     }
     private fun countDistance(){
